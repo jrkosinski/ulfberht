@@ -116,7 +116,7 @@ contract PolyEscrow is HasSecurityContext, IPolyEscrow {
         require(input.secondary.participantAddress != address(0), "InvalidPartyAddress");
 
         //EXCEPTION: InvalidPartyAddress: (receiver cannot be the same as payer)
-        require(input.primary.participantAddress != input.secondary.participantAddress, "InvalidReceiver");
+        require(input.primary.participantAddress != input.secondary.participantAddress, "InvalidPartyAddress");
 
         //EXCEPTION: InvalidAmount
         require(input.primary.amount > 0, "InvalidAmount");
@@ -149,7 +149,7 @@ contract PolyEscrow is HasSecurityContext, IPolyEscrow {
         // -------------
 
         //Create and store the escrow
-        EscrowDefinition memory escrow;
+        EscrowDefinition storage escrow = escrows[input.id];
         escrow.id = input.id;
 
         //add primary participant
@@ -182,13 +182,12 @@ contract PolyEscrow is HasSecurityContext, IPolyEscrow {
         //arbitration and status
         escrow.arbitration = input.arbitration;        
         escrow.status = EscrowStatus.Pending;
-        escrow.fees = input.fees;
 
         //store the escrow
         escrows[input.id] = escrow;
 
         //add the platform fee to the list of fees, if it isn't already there
-        _addPlatformFeeForEscrow(input.id);
+        _addEscrowFeesToEscrow(input.id, input.fees);
 
         // -------------
         // EVENTS 
@@ -304,7 +303,7 @@ contract PolyEscrow is HasSecurityContext, IPolyEscrow {
         return (address(0), 0);
     }
 
-    function _addPlatformFeeForEscrow(bytes32 escrowId) internal {
+    function _addEscrowFeesToEscrow(bytes32 escrowId, FeeDefinition[] memory fees) internal {
         //get the fee and fee recipient 
         (address platformRecipient, uint256 platformFee) = _getFeeRecipientAndBps();
 
@@ -316,17 +315,19 @@ contract PolyEscrow is HasSecurityContext, IPolyEscrow {
             uint256 foundFee = 0;
 
             //try to find if the platform fee has already been added
-            for(uint n=0; n<escrow.fees.length; n++) {
-                if (escrow.fees[n].recipient == platformRecipient) {
+            for(uint n=0; n<fees.length; n++) {
+                if (fees[n].recipient == platformRecipient) {
                     found = true;
-                    foundFee = escrow.fees[n].feeBps;
+                    foundFee = fees[n].feeBps;
 
                     //if it's been added, but it's too little, make it correct
                     if (foundFee < platformFee) {
-                        escrow.fees[n].feeBps = platformFee;
+                        fees[n].feeBps = platformFee;
                     }
                     break;
                 }
+
+                escrow.fees.push(fees[n]);
             }
 
             //add the platform fee if it wasn't already there

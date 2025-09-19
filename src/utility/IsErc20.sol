@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.20;
 
 library IsErc20 {
     function check(address tokenAddress) internal view returns (bool) {
