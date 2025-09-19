@@ -127,13 +127,11 @@ contract PolyEscrow is HasSecurityContext, IPolyEscrow {
             require(IsErc20.check(input.primary.currency), "InvalidToken");
         }
         if (input.secondary.paymentType == EscrowPaymentType.ERC20) {
-            require(IsErc20.check(input.primary.currency), "InvalidToken");
+            require(IsErc20.check(input.secondary.currency), "InvalidToken");
         }
 
         //EXCEPTION: CurrencyMismatch
-        if (input.primary.currency == input.secondary.currency) {
-            require(input.primary.currency != address(0), "CurrencyMismatch");
-        }
+        require (input.primary.currency != input.secondary.currency, "CurrencyMismatch");
 
         //EXCEPTION: InvalidEndDate
         if (input.endTime > 0) {
