@@ -130,7 +130,7 @@ struct ArbitrationDefinition {
  */
 struct EscrowParticipant {
     address participantAddress;
-    address currency;
+    address currency;               //ignored if paymentType not ERC20 or ERC721
     EscrowPaymentType paymentType;
     uint256 amountPledged;
     uint256 amountPaid;

@@ -1,0 +1,341 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.20;
+
+import "../security/HasSecurityContext.sol"; 
+import "../utility/CarefulMath.sol";
+import "../interfaces/ISystemSettings.sol";
+import "../interfaces/IPolyEscrow.sol";
+import "../utility/IsErc20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+//import "hardhat/console.sol";
+
+uint8 constant MAX_RELAY_NODES_PER_ESCROW = 10; // Max number of relay nodes allowed per escrow
+
+//TODO: add relay nodes
+//TODO: add arbitration module
+//TODO: make pausable
+
+struct CreateEscrowInput {
+    bytes32 id;                         //Unique identifier for the escrow
+    EscrowParticipantInput primary;     //Details of the first party
+    EscrowParticipantInput secondary;   //Details of the second party
+    uint256 startTime;                  //Optional start time for the escrow (0 if none)
+    uint256 endTime;                    //Optional end time for the escrow (0 if none)
+    ArbitrationDefinition arbitration;  //Arbitration details
+    FeeDefinition[] fees;               //Fees to be applied on payments
+}
+
+struct EscrowParticipantInput {
+    address participantAddress;         
+    address currency;                   //token address, or 0x0 for native
+    EscrowPaymentType paymentType;      
+    uint256 amount;                     //amount pledged  
+}
+
+contract PolyEscrow is HasSecurityContext, IPolyEscrow {
+    mapping(bytes32 => EscrowDefinition) internal escrows;
+    ISystemSettings public settings;
+
+    // -----------
+    // MODIFIERS 
+    // -----------
+
+    //Enforces that the escrow is not yet in a terminal state 
+    modifier whenNotCompleted(bytes32 escrowId) {
+        require(escrows[escrowId].status != EscrowStatus.Completed, "InvalidEscrowState");
+        _;
+    }
+
+    modifier whenNotPaused() {
+        //require(!paused(), "Paused");
+        _;
+    }
+
+    // -----------
+    // EVENTS 
+    // -----------
+
+    //raised when the escrow agreement is first created
+    event EscrowCreated (
+        bytes32 indexed escrowId
+    );
+
+    
+    /**
+     * Constructor for PolyEscrow.
+     * 
+     * @param securityContext Security context is required.
+     * @param systemSettings System settings contains information about the value and fee.
+     */
+    constructor(
+        ISecurityContext securityContext, 
+        ISystemSettings systemSettings
+    ) 
+    {
+        _setSecurityContext(securityContext);
+        settings = systemSettings;
+    }
+
+
+    // ----------------------
+    // - Escrow Management  -
+    // ----------------------
+
+
+    /**
+     * @dev Creates a new escrow agreement.
+     * 
+     * Reverts: 
+     * - InvalidEscrow
+     * - InvalidPayer
+     * - InvalidReceiver
+     * - InvalidAmount
+     * - MaxArbitersExceeded
+     * - InvalidArbiter
+     * - InvalidToken
+     * - InvalidEndDate
+     * - DuplicateEscrow
+     * - InvalidArbitrationModule
+     * 
+     * Emits: 
+     * - EscrowCreated
+     *
+     * @param input Specification of the escrow to create.
+     */
+    function createEscrow(CreateEscrowInput memory input) public whenNotPaused {
+
+        // -------------
+        // VALIDATION 
+        // -------------
+
+        //EXCEPTION: InvalidEscrow
+        require(input.id != 0, "InvalidEscrow");
+
+        //EXCEPTION: InvalidPartyAddress
+        require(input.primary.participantAddress != address(0), "InvalidPartyAddress");
+        require(input.secondary.participantAddress != address(0), "InvalidPartyAddress");
+
+        //EXCEPTION: InvalidPartyAddress: (receiver cannot be the same as payer)
+        require(input.primary.participantAddress != input.secondary.participantAddress, "InvalidReceiver");
+
+        //EXCEPTION: InvalidAmount
+        require(input.primary.amount > 0, "InvalidAmount");
+        require(input.secondary.amount > 0, "InvalidAmount");
+
+        //EXCEPTION: InvalidToken
+        if (input.primary.paymentType == EscrowPaymentType.ERC20) {
+            require(IsErc20.check(input.primary.currency), "InvalidToken");
+        }
+        if (input.secondary.paymentType == EscrowPaymentType.ERC20) {
+            require(IsErc20.check(input.primary.currency), "InvalidToken");
+        }
+
+        //EXCEPTION: CurrencyMismatch
+        if (input.primary.currency == input.secondary.currency) {
+            require(input.primary.currency != address(0), "CurrencyMismatch");
+        }
+
+        //EXCEPTION: InvalidEndDate
+        if (input.endTime > 0) {
+            require((input.endTime > block.timestamp + 3600) && (input.endTime > input.startTime), 'InvalidEndDate');
+        }
+
+        // EXCEPTION: DuplicateEscrow if existing escrow
+        require(escrows[input.id].id != input.id, "DuplicateEscrow");
+
+
+        // -------------
+        // EXECUTION 
+        // -------------
+
+        //Create and store the escrow
+        EscrowDefinition memory escrow;
+        escrow.id = input.id;
+
+        //add primary participant
+        escrow.primary = EscrowParticipant({
+            participantAddress: input.primary.participantAddress,
+            currency: input.primary.currency,
+            paymentType: input.primary.paymentType,
+            amountPledged: input.primary.amount,
+            amountPaid: 0,
+            amountReleased: 0,
+            amountRefunded: 0
+        });
+
+        //add secondary participant
+        escrow.secondary = EscrowParticipant({
+            participantAddress: input.secondary.participantAddress,
+            currency: input.secondary.currency,
+            paymentType: input.secondary.paymentType,
+            amountPledged: input.secondary.amount,
+            amountPaid: 0,
+            amountReleased: 0,
+            amountRefunded: 0
+        });
+        
+        //add times
+        escrow.startTime = input.startTime;
+        escrow.endTime = input.endTime;
+        escrow.timestamp = block.timestamp;
+
+        //arbitration and status
+        escrow.arbitration = input.arbitration;        
+        escrow.status = EscrowStatus.Pending;
+        escrow.fees = input.fees;
+
+        //store the escrow
+        escrows[input.id] = escrow;
+
+        //add the platform fee to the list of fees, if it isn't already there
+        _addPlatformFeeForEscrow(input.id);
+
+        // -------------
+        // EVENTS 
+        // -------------
+
+        //EVENT: emit event escrow created
+        emit EscrowCreated(input.id);
+    }
+
+    /**
+     * @inheritdoc IPolyEscrow
+     */
+    function getEscrow(bytes32 escrowId) public view returns (EscrowDefinition memory) {
+        return escrows[escrowId];
+    }
+
+    /**
+     * @inheritdoc IPolyEscrow
+     */
+    function hasEscrow(bytes32 escrowId) public view returns (bool) {
+        return escrows[escrowId].id == escrowId;
+    }
+
+    /**
+     * @dev Allows multiple payments to be processed for an escrow.
+     * 
+     * Reverts: 
+     * - Paused
+     * - InvalidEscrowState
+     * - InvalidEscrow
+     * - EscrowNotActive
+     * - InvalidCurrency
+     * - InvalidAmount
+     * - TokenPaymentFailed
+     * 
+     * Emits: 
+     * - PaymentReceived
+     * - EscrowFullyPaid
+     * 
+     * @param paymentInput Payment inputs
+     */
+    function placePayment(PaymentInput calldata paymentInput) public virtual payable 
+        whenNotPaused 
+        whenNotCompleted(paymentInput.escrowId)
+    {
+        
+    }
+    
+
+    // ----------------------
+    // - HasSecurityContext -
+    // ----------------------
+
+    /**
+     * @inheritdoc HasSecurityContext
+     */
+    function getSecurityContext() external override(IPolyEscrow, HasSecurityContext) view returns (ISecurityContext) {
+        return this.getSecurityContext();
+    }
+
+
+    // ----------------------
+    // - Arbitration        -
+    // ----------------------
+
+    /**
+     * @dev Executes an arbitration proposal that has been approved by the arbitration module.
+     * Can only be called by the arbitration module associated with the escrow.
+     * 
+     * Reverts: 
+     * - InvalidEscrow
+     * - Unauthorized
+     * - AlreadyReleased
+     * - AmountExceeded
+     * - PaymentTransferFailed
+     * 
+     * Emits: 
+     * - PaymentTransferred
+     * - EscrowRefunded
+     * - EscrowReleased
+     * 
+     * @param escrowId The unique escrow id for the arbitration proposal to execute.
+     */
+    function executeArbitrationProposal(bytes32 escrowId) external {
+    }
+
+    /**
+     * @dev Sets the arbitration state for an escrow. Only the authorized ArbitrationModule 
+     * contract may call this, to signal that the specified escrow is now officially in arbitration. 
+     * From arbitration it may go into Completed status once the arbitration is executed.
+     * 
+     * Reverts: 
+     * - InvalidEscrow
+     * - Unauthorized
+     * 
+     * @param escrowId The unique id of the escrow to put into arbitration.
+     * @param state If true, sets the state to Arbitration. If false, sets the state to Active.
+     */
+    function setArbitration(bytes32 escrowId, bool state) external {
+    }
+
+
+
+    // ----------------------
+    // - Non-Public         -
+    // ----------------------
+
+    function _getFeeRecipientAndBps() internal view returns (address, uint256) {
+        if (address(settings) != address(0)) 
+            return (settings.vaultAddress(), settings.feeBps());
+
+        //TODO: test this
+        return (address(0), 0);
+    }
+
+    function _addPlatformFeeForEscrow(bytes32 escrowId) internal {
+        //get the fee and fee recipient 
+        (address platformRecipient, uint256 platformFee) = _getFeeRecipientAndBps();
+
+        //get the escrow
+        EscrowDefinition storage escrow = escrows[escrowId];
+        
+        if (platformRecipient != address(0)) {
+            bool found = false;
+            uint256 foundFee = 0;
+
+            //try to find if the platform fee has already been added
+            for(uint n=0; n<escrow.fees.length; n++) {
+                if (escrow.fees[n].recipient == platformRecipient) {
+                    found = true;
+                    foundFee = escrow.fees[n].feeBps;
+
+                    //if it's been added, but it's too little, make it correct
+                    if (foundFee < platformFee) {
+                        escrow.fees[n].feeBps = platformFee;
+                    }
+                    break;
+                }
+            }
+
+            //add the platform fee if it wasn't already there
+            if (!found && platformFee > 0) {
+                escrow.fees.push(FeeDefinition({
+                    recipient: platformRecipient,
+                    feeBps: platformFee
+                }));
+            }
+        }
+    }
+}
