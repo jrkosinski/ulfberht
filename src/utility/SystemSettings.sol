@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import "./HasSecurityContext.sol";
-import "./interfaces/ISystemSettings.sol";
-import "./SecurityRoles.sol";
+import "../interfaces/ISystemSettings.sol";
+import "../security/HasSecurityContext.sol";
+import "../security/SecurityRoles.sol";
 
 /**
  * @title SystemSettings
