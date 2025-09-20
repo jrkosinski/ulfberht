@@ -17,7 +17,7 @@ docs/
 .env
 
 # Ignore specific shell scripts and hardhat configuration
-hardhat.config.ts
+#hardhat.config.ts
 scripts/*.sh
 
 crytic-export/

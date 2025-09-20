@@ -243,7 +243,7 @@ contract PolyEscrow is HasSecurityContext, IPolyEscrow {
      * @inheritdoc HasSecurityContext
      */
     function getSecurityContext() external override(IPolyEscrow, HasSecurityContext) view returns (ISecurityContext) {
-        return this.getSecurityContext();
+        return securityContext;
     }
 
 

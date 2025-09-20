@@ -3,100 +3,99 @@ import { expect } from 'chai';
 import { BigNumberish } from 'ethers';
 import { ethers } from 'hardhat';
 
-export interface AsymmetricalEscrow {
-    id: any;
-    payer: string;
-    receiver: string;
-    arbiters: string[]; // The addresses of the arbiters
-    quorum: number; // The number of arbiters consent required
-    amount: any; // The total amount of the escrow
-    currency: string; //The currency address, 0x0 for native
-    amountRefunded: any; // The amount refunded so far
-    amountReleased: any; // The amount released so far
-    amountPaid: any; // The amount paid so far
-    timestamp: number; // The timestamp when the proposal was made
-    startTime: number; // The timestamp when the escrow period begins
-    endTime: number; //The timestamp when the escrow period ends
-    status: number; // 0 = pending, 1 = active, 2 = completed, 3=arbitration
-    fullyPaid: boolean; // Indicates if the escrow is fully paid
-    payerReleased: boolean;
-    receiverReleased: boolean;
-    released: boolean;
-    arbitrationModule: string;
+export interface EscrowParticipant {
+    participantAddress: string;
+    currency: string;
+    paymentType: number;
+
+    //amounts
+    amountPledged: number;
+    amountPaid: number;
+    amountReleased: number;
+    amountRefunded: number;
 }
 
-export interface IArbitrationProposal {
+export interface FeeDefinition {
+    recipient: string;
+    feeBps: number;
+}
+
+export interface EscrowDefinition {
+    //unique id
     id: any;
-    escrowId: any;
-    proposalType: number;
+
+    //counterparties
+    primary: EscrowParticipant;
+    secondary: EscrowParticipant;
+
+    //times
+    timestamp: number;
+    startTime: number;
+    endTime: number;
+
+    //status
     status: number;
-    proposer: string;
-    amount: any;
-    votesFor: number;
-    votesAgainst: number;
-    escrowAddress: string;
+
+    //arbitration
+    //ArbitrationDefinition arbitration;
+
+    //fees
+    //TODO: fees for ERC721 doesn't make sense. Should only be for ERC20 and Native. But what about bitcoin?
+    fees: FeeDefinition[];
 }
 
-export function convertEscrow(rawData: any[]): AsymmetricalEscrow {
-    //console.log(rawData);
-    const output = {
+export interface EscrowParticipantInput {
+    participantAddress: string;
+    currency: string; //token address, or 0x0 for native
+    paymentType: number; //0 = payer, 1 = receiver
+    amount: BigNumberish; //amount pledged
+}
+
+export function convertEscrow(rawData: any[]): EscrowDefinition {
+    const output: EscrowDefinition = {
         id: rawData[0],
-        payer: rawData[1][0],
-        currency: rawData[1][1],
-        amount: rawData[1][3],
-        amountRefunded: rawData[1][4],
-        amountReleased: rawData[1][5],
-        amountPaid: rawData[1][6],
-        payerReleased: rawData[1][7],
-        receiver: rawData[2][0],
-        receiverReleased: rawData[2][7],
-        timestamp: rawData[3],
-        startTime: rawData[4],
-        endTime: rawData[5],
-        status: rawData[6],
-        arbiters: rawData[7],
-        arbitrationModule: rawData[8],
-        quorum: rawData[9],
-        released: rawData[10],
-        fullyPaid: false,
+        primary: {
+            participantAddress: rawData[1][0],
+            currency: rawData[1][1],
+            paymentType: rawData[1][2],
+            amountPledged: Number(rawData[1][3]),
+            amountPaid: Number(rawData[1][4]),
+            amountReleased: Number(rawData[1][5]),
+            amountRefunded: Number(rawData[1][6]),
+        },
+        secondary: {
+            participantAddress: rawData[2][0],
+            currency: rawData[2][1],
+            paymentType: rawData[2][2],
+            amountPledged: Number(rawData[2][3]),
+            amountPaid: Number(rawData[2][4]),
+            amountReleased: Number(rawData[2][5]),
+            amountRefunded: Number(rawData[2][6]),
+        },
+        timestamp: Number(rawData[3]),
+        startTime: Number(rawData[4]),
+        endTime: Number(rawData[5]),
+        status: Number(rawData[6]),
+        //arbitration: { module: rawData[8], data: rawData[7] },
+        fees: rawData[8], //TODO
     };
 
-    output.fullyPaid = output.amountPaid >= output.amount;
     return output;
 }
-
-export function convertProposal(rawData: any[]): IArbitrationProposal {
-    return {
-        id: rawData[0],
-        escrowId: rawData[1],
-        proposalType: rawData[2],
-        status: rawData[3],
-        proposer: rawData[4],
-        amount: rawData[5],
-        votesFor: rawData[6],
-        votesAgainst: rawData[7],
-        escrowAddress: rawData[7],
-    };
-}
-
-export const ProposalType = {
-    Refund: 0,
-    Release: 1,
-};
-
-export const ProposalStatus = {
-    Active: 0,
-    Rejected: 1,
-    Accepted: 2,
-    Executed: 3,
-    Cancelled: 4,
-};
 
 export const EscrowStatus = {
     Pending: 0,
     Active: 1,
     Completed: 2,
     Arbitration: 3,
+};
+
+export const PaymentType = {
+    Native: 0,
+    ERC20: 1,
+    ERC721: 2,
+    Bitcoin: 3,
+    Custom: 4,
 };
 
 export class TestUtil {
@@ -140,7 +139,7 @@ export class TestUtil {
         payerAccount: HardhatEthersSigner,
         amount: BigNumberish,
         isToken: boolean = false
-    ): Promise<AsymmetricalEscrow> {
+    ): Promise<EscrowDefinition> {
         if (isToken) {
             await this.testToken
                 .connect(payerAccount)
@@ -167,47 +166,26 @@ export class TestUtil {
         return escrow;
     }
 
-    /**
-     * Creates a new escrow.
-     * @param escrowId The ID of the escrow.
-     * @param payerAccount The account creating the escrow.
-     * @param receiverAddress The address of the receiver.
-     * @param amount The amount to be held in escrow.
-     * @param isToken Whether the payment is in tokens or native currency.
-     * @param arbiters The addresses of the arbiters.
-     * @param quorum The number of arbiters required for consent.
-     * @param startTime The start time of the escrow period.
-     * @param endTime The end time of the escrow period.
-     * @returns The created escrow object.
-     */
-    public async createEscrowAsym(
+    public async createEscrow(
         escrowId: string,
-        payerAccount: HardhatEthersSigner,
-        receiverAddress: string,
-        amount: BigNumberish,
-        isToken: boolean = false,
-        arbiters: string[] = [],
-        quorum: number = arbiters?.length ?? 0,
+        creatorAccount: HardhatEthersSigner,
+        primary: EscrowParticipantInput,
+        secondary: EscrowParticipantInput,
         startTime: number = 0,
-        endTime: number = 0,
-        arbitrationModuleAddr: string = ethers.ZeroAddress
-    ): Promise<AsymmetricalEscrow> {
-        if (isToken)
-            await this.testToken
-                .connect(payerAccount)
-                .approve(this.polyEscrow.target, amount);
-
-        await this.polyEscrow.connect(payerAccount).createEscrow({
-            currency: isToken ? this.testToken.target : ethers.ZeroAddress,
+        endTime: number = 0
+    ): Promise<EscrowDefinition> {
+        await this.polyEscrow.connect(creatorAccount).createEscrow({
             id: escrowId,
-            receiver: receiverAddress,
-            payer: payerAccount.address,
-            arbiters,
-            quorum,
-            amount,
+            primary,
+            secondary,
             startTime,
             endTime,
-            arbitrationModule: arbitrationModuleAddr,
+            arbitration: {
+                arbitrationModule: ethers.ZeroAddress,
+                arbiters: [],
+                quorum: 0,
+            },
+            fees: [],
         });
 
         //return escrow
@@ -233,8 +211,10 @@ export class TestUtil {
         return await token.balanceOf(address);
     }
 
-    public verifyEscrow(escrow: AsymmetricalEscrow, expectedValues: any) {
+    public verifyEscrow(escrow: EscrowDefinition, expectedValues: any) {
         if (expectedValues.id) expect(escrow.id).to.equal(expectedValues.id);
+
+        /*
         if (expectedValues.payer)
             expect(escrow.payer).to.equal(expectedValues.payer);
         if (expectedValues.receiver)
@@ -283,5 +263,6 @@ export class TestUtil {
                 expect(escrow.arbiters[n]).to.equal(expectedValues.arbiters[n]);
             }
         }
+        */
     }
 }

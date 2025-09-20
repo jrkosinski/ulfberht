@@ -102,7 +102,7 @@ struct EscrowDefinition {
  */
 struct FeeDefinition {
     address recipient;
-    uint256 feeBps;
+    uint256 feeBps; //TODO: this should be uint16; highest possible fee is 10000 bps (100%)
 }
 
 /**
