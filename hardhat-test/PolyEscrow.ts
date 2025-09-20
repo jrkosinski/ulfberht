@@ -18,7 +18,6 @@ describe('PolyEscrow', function () {
     let systemSettings: any;
     let polyEscrow: any;
     let testToken: any;
-    let arbitrationModule: any;
     let admin: HardhatEthersSigner;
     let nonOwner: HardhatEthersSigner;
     let vaultAccount: HardhatEthersSigner;
@@ -114,6 +113,7 @@ describe('PolyEscrow', function () {
                     }
                 );
 
+                //verify escrow properties
                 testUtil.verifyEscrow(escrow, {
                     id: escrowId,
                     primary: {
