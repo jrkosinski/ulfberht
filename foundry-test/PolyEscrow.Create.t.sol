@@ -183,6 +183,127 @@ contract PaymentEscrowTest is Test {
         escrow.createEscrow(input2);
     }
 
+    //cannot create an escrow with invalid ERC20 tokens (InvalidToken)
+    function testCannotCreateEscrowWithInvalidTokens() public {
+        vm.startPrank(payer1);
+        CreateEscrowInput memory input1 = createEscrowInputWithCurrencyAddresses(
+            testEscrowId,
+            payer1,
+            address(0),
+            100,
+            EscrowPaymentType.Native,
+            receiver1,
+            address(receiver2),
+            100,
+            EscrowPaymentType.ERC20
+        );
+
+        vm.expectRevert(bytes("InvalidToken"));
+        escrow.createEscrow(input1);
+
+        CreateEscrowInput memory input2 = createEscrowInputWithCurrencyAddresses(
+            testEscrowId,
+            payer1,
+            address(receiver2),
+            100,
+            EscrowPaymentType.ERC20,
+            receiver1,
+            address(0),
+            100,
+            EscrowPaymentType.Native
+        );
+
+        vm.expectRevert(bytes("InvalidToken"));
+        escrow.createEscrow(input2);
+    }
+
+    //cannot create an escrow with two of the same currency (CurrencyMismatch)
+    function testCannotCreateEscrowWithSameCurrency() public {
+        vm.startPrank(payer1);
+        CreateEscrowInput memory input1 = createEscrowInput(
+            testEscrowId,
+            payer1,
+            100,
+            EscrowPaymentType.Native,
+            receiver1,
+            100,
+            EscrowPaymentType.Native
+        );
+
+        vm.expectRevert(bytes("CurrencyMismatch"));
+        escrow.createEscrow(input1);
+
+        CreateEscrowInput memory input2 = createEscrowInput(
+            testEscrowId,
+            payer1,
+            100,
+            EscrowPaymentType.ERC20,
+            receiver1,
+            100,
+            EscrowPaymentType.ERC20
+        );
+
+        vm.expectRevert(bytes("CurrencyMismatch"));
+        escrow.createEscrow(input2);
+    }
+
+    //cannot create two escrows with same id (DuplicateEscrow)
+    function testCannotCreateEscrowWithDuplicateId() public {
+        vm.startPrank(payer1);
+        CreateEscrowInput memory input1 = createEscrowInput(
+            testEscrowId,
+            payer1,
+            100,
+            EscrowPaymentType.Native,
+            receiver1,
+            100,
+            EscrowPaymentType.ERC20
+        );
+
+        escrow.createEscrow(input1);
+
+        CreateEscrowInput memory input2 = createEscrowInput(
+            testEscrowId,
+            payer1,
+            100,
+            EscrowPaymentType.Native,
+            receiver1,
+            100,
+            EscrowPaymentType.ERC20
+        );
+
+        vm.expectRevert(bytes("DuplicateEscrow"));
+        escrow.createEscrow(input2);
+    }
+
+    function _testWithTimestamps(uint256 start, uint256 end, bool expectRevert) internal {
+        vm.startPrank(payer1);
+        CreateEscrowInput memory input1 = createEscrowInputWithTimes(
+            testEscrowId,
+            payer1,
+            100,
+            EscrowPaymentType.Native,
+            receiver1,
+            100,
+            EscrowPaymentType.ERC20,
+            start,
+            end
+        );
+
+        if (expectRevert) {
+            vm.expectRevert(bytes("InvalidEndDate"));
+        }
+        escrow.createEscrow(input1);
+    }
+
+    //cannot create an escrow with start & end times inconsistent (InvalidEndDate)
+    function testCannotCreateEscrowWithInconsistenEndTimes() public {
+        _testWithTimestamps(block.timestamp + 1000, block.timestamp + 500, true);
+        _testWithTimestamps(block.timestamp, block.timestamp, true);
+        _testWithTimestamps(block.timestamp, block.timestamp + 3600, true);
+        _testWithTimestamps(block.timestamp, block.timestamp + 3601, false);
+    }
+
     function createEscrowInputNoId(address primaryAddress, address secondaryAddress) internal view returns (CreateEscrowInput memory) {
         return createEscrowInput(
             bytes32(0), 
@@ -214,20 +335,116 @@ contract PaymentEscrowTest is Test {
             currency2 = address(testToken);
         }
 
+        return createEscrowInputWithCurrencyAddresses(
+            id, 
+            primaryAddress,
+            currency1,
+            primaryAmount, 
+            primaryPaymentType,
+            secondaryAddress,
+            currency2,
+            secondaryAmount, 
+            secondaryPaymentType
+        );
+    }
+
+    function createEscrowInputWithCurrencyAddresses(
+        bytes32 id, 
+        address primaryAddress,
+        address primaryCurrency,
+        uint256 primaryAmount, 
+        EscrowPaymentType primaryPaymentType,
+        address secondaryAddress,
+        address secondaryCurrency,
+        uint256 secondaryAmount, 
+        EscrowPaymentType secondaryPaymentType
+    ) internal pure returns (CreateEscrowInput memory) {
+
         return CreateEscrowInput({
             id: id,
             primary: EscrowParticipantInput({
                 participantAddress: primaryAddress,
-                currency: currency1,
-                paymentType: secondaryPaymentType,
+                currency: primaryCurrency,
+                paymentType: primaryPaymentType,
                 amount: primaryAmount
             }),
             startTime: 0,
             endTime: 0,
             secondary: EscrowParticipantInput({
                 participantAddress: secondaryAddress,
-                currency: currency2,
+                currency: secondaryCurrency,
+                paymentType: secondaryPaymentType,
+                amount: secondaryAmount
+            }),
+            fees: new FeeDefinition[](0),
+            arbitration: ArbitrationDefinition({
+                arbiters: new address[](0),
+                arbitrationModule: address(0),
+                quorum: 0
+            })
+        });
+    }
+
+    function createEscrowInputWithTimes(
+        bytes32 id, 
+        address primaryAddress,
+        uint256 primaryAmount, 
+        EscrowPaymentType primaryPaymentType,
+        address secondaryAddress,
+        uint256 secondaryAmount, 
+        EscrowPaymentType secondaryPaymentType,
+        uint256 startTime,
+        uint256 endTime
+    ) internal view returns (CreateEscrowInput memory) {
+
+        return _createEscrowInput(
+            id, 
+            primaryAddress,
+            primaryAmount, 
+            primaryPaymentType,
+            secondaryAddress,
+            secondaryAmount, 
+            secondaryPaymentType,
+            startTime,
+            endTime
+        );
+    }
+
+    function _createEscrowInput(
+        bytes32 id, 
+        address primaryAddress,
+        uint256 primaryAmount, 
+        EscrowPaymentType primaryPaymentType,
+        address secondaryAddress,
+        uint256 secondaryAmount, 
+        EscrowPaymentType secondaryPaymentType,
+        uint256 startTime,
+        uint256 endTime
+    ) internal view returns (CreateEscrowInput memory) {
+        address currency1 = address(0);
+        address currency2 = address(0);
+
+        if (primaryPaymentType == EscrowPaymentType.ERC20) {
+            currency1 = address(testToken);
+        }
+        if (secondaryPaymentType == EscrowPaymentType.ERC20) {
+            currency2 = address(testToken);
+        }
+
+        return CreateEscrowInput({
+            id: id,
+            primary: EscrowParticipantInput({
+                participantAddress: primaryAddress,
+                currency: currency1,
                 paymentType: primaryPaymentType,
+                amount: primaryAmount
+            }),
+            startTime: startTime,
+            endTime: endTime,
+            secondary: EscrowParticipantInput({
+                participantAddress: secondaryAddress,
+                currency: currency2,
+                paymentType: secondaryPaymentType,
                 amount: secondaryAmount
             }),
             fees: new FeeDefinition[](0),
