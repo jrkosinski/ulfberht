@@ -21,6 +21,11 @@ jobs:
         with:
           version: nightly
 
+      - name: Run yarn install
+        run: |
+          yarn install
+        id: install
+
       - name: Run Foundry build
         run: |
           forge --version
