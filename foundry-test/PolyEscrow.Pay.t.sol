@@ -11,9 +11,9 @@ import {
     EscrowParticipant, 
     FeeDefinition, 
     EscrowPaymentType, 
-    ArbitrationDefinition,
-    PaymentInput,
+    ArbitrationDefinition
 } from "../src/escrow/Types.sol";
+import { PaymentInput } from "../src/interfaces/IPolyEscrow.sol";
 import {TestToken} from "../src/test-contracts/TestToken.sol";
 import {console} from "forge-std/console.sol";
 import {FailingToken} from "../src/test-contracts/FailingToken.sol";
