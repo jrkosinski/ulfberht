@@ -203,7 +203,7 @@ contract PolyEscrowCreateTest is PolyEscrowTestBase {
 
     function _testWithTimestamps(uint256 start, uint256 end, bool expectRevert) internal {
         vm.startPrank(payer1);
-        CreateEscrowInput memory input1 = createEscrowInputWithTimes(
+        CreateEscrowInput memory input = createEscrowInputWithTimes(
             testEscrowId,
             payer1,
             100,
@@ -218,7 +218,7 @@ contract PolyEscrowCreateTest is PolyEscrowTestBase {
         if (expectRevert) {
             vm.expectRevert(bytes("InvalidEndDate"));
         }
-        escrow.createEscrow(input1);
+        escrow.createEscrow(input);
     }
 
     //cannot create an escrow with start & end times inconsistent (InvalidEndDate)

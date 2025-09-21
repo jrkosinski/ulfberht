@@ -46,6 +46,10 @@ contract PolyEscrow is HasSecurityContext, IPolyEscrow {
         _;
     }
 
+    modifier whenNotInArbitration(bytes32 escrowId) {
+        _;
+    }
+
     modifier whenNotPaused() {
         //require(!paused(), "Paused");
         _;
@@ -58,6 +62,15 @@ contract PolyEscrow is HasSecurityContext, IPolyEscrow {
     //raised when the escrow agreement is first created
     event EscrowCreated (
         bytes32 indexed escrowId
+    );
+
+    //raised when payment is received
+    event PaymentReceived (
+        bytes32 indexed escrowId,
+        address from, 
+        address currency,
+        EscrowPaymentType paymentType,
+        uint256 amount 
     );
 
     
@@ -230,8 +243,76 @@ contract PolyEscrow is HasSecurityContext, IPolyEscrow {
     function placePayment(PaymentInput calldata paymentInput) public virtual payable 
         whenNotPaused 
         whenNotCompleted(paymentInput.escrowId)
+        whenNotInArbitration(paymentInput.escrowId)
     {
-        
+        //EXCEPTION: InvalidAmount
+        require(paymentInput.amount > 0, "InvalidAmount");
+
+        //EXCEPTION: InvalidEscrow
+        require(hasEscrow(paymentInput.escrowId), "InvalidEscrow");
+
+        //get the escrow 
+        EscrowDefinition storage escrow = escrows[paymentInput.escrowId];
+        EscrowParticipant memory payer;
+
+        //figure out by the currency, which participant is paying
+        if (escrow.primary.paymentType == EscrowPaymentType.Native) {
+            if (paymentInput.currency == address(0)) {
+                //got it 
+                payer = escrow.primary;
+            }
+        }
+        if (escrow.primary.paymentType == EscrowPaymentType.ERC20 || 
+            escrow.primary.paymentType == EscrowPaymentType.ERC721) {
+            if (paymentInput.currency == escrow.primary.currency) {
+                //got it 
+                payer = escrow.primary;
+            }
+        }
+        if (escrow.secondary.paymentType == EscrowPaymentType.Native) {
+            if (paymentInput.currency == address(0)) {
+                //got it 
+                payer = escrow.secondary;
+            }
+        }
+        if (escrow.secondary.paymentType == EscrowPaymentType.ERC20 || 
+            escrow.secondary.paymentType == EscrowPaymentType.ERC721) {
+            if (paymentInput.currency == escrow.secondary.currency) {
+                //got it 
+                payer = escrow.secondary;
+            }
+        }
+
+        //EXCEPTION: InvalidCurrency
+        //otherwise, invalid currency
+        if (payer.participantAddress == address(0))
+            revert("InvalidCurrency");
+
+        //if status was pending, is now active 
+        if (escrow.status == EscrowStatus.Pending)
+            escrow.status = EscrowStatus.Active;
+
+        //increment the amount paid for the participant
+        EscrowParticipant storage participant = 
+            (payer.participantAddress == escrow.primary.participantAddress) ? 
+                escrow.primary : 
+                escrow.secondary;
+        participant.amountPaid += paymentInput.amount;
+
+        //if escrow now fully paid, release it 
+        if (escrow.primary.amountPaid >= escrow.primary.amountPledged &&
+            escrow.secondary.amountPaid >= escrow.secondary.amountPledged) {
+            _releaseEscrow(paymentInput.escrowId);
+        }
+
+        //EVENT: emit payment received event
+        emit PaymentReceived(
+            paymentInput.escrowId,
+            msg.sender,
+            paymentInput.currency,
+            payer.paymentType,
+            paymentInput.amount
+        );
     }
     
 
@@ -336,5 +417,8 @@ contract PolyEscrow is HasSecurityContext, IPolyEscrow {
                 }));
             }
         }
+    }
+
+    function _releaseEscrow(bytes32 escrowId) internal pure {
     }
 }
