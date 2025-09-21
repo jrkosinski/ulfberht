@@ -55,8 +55,8 @@ jobs:
           yarn install
         id: install
 
-      - name: Install dependencies
-        run: yarn ci
+      # name: Install dependencies
+      #  run: yarn ci
 
       - name: Compile contracts
         run: npx hardhat compile
