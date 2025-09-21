@@ -136,6 +136,7 @@ describe('PolyEscrow', function () {
                     },
                     startTime: 0,
                     endTime: 0,
+                    status: EscrowStatus.Pending,
                 });
             });
         });
@@ -241,6 +242,7 @@ describe('PolyEscrow', function () {
                     },
                     startTime: 0,
                     endTime: 0,
+                    status: EscrowStatus.Active,
                 });
             });
 
@@ -278,8 +280,11 @@ describe('PolyEscrow', function () {
                     },
                     startTime: 0,
                     endTime: 0,
+                    status: EscrowStatus.Active,
                 });
             });
+
+            it.skip('when escrow is fully paid, it is automatically released', async function () {});
         });
 
         describe('Events', function () {
