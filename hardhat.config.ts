@@ -26,7 +26,7 @@ const config: HardhatUserConfig = {
         sepolia: {
             accounts: [
                 process.env.SEPOLIA_PRIVATE_KEY ??
-                    '0xc0ffee254729296a45a3885639AC7E10F9d54979',
+                    'c0ffee254729296a45a3885639AC7E10F9d54979',
             ],
             chainId: 11155111,
             url: `https://sepolia.infura.io/v3/${process.env.INFURA_ID}`,
@@ -34,7 +34,7 @@ const config: HardhatUserConfig = {
         optimism: {
             accounts: [
                 process.env.OPTIMISM_PRIVATE_KEY ??
-                    '0xc0ffee254729296a45a3885639AC7E10F9d54979',
+                    'c0ffee254729296a45a3885639AC7E10F9d54979',
             ],
             chainId: 10,
             url: `https://mainnet.optimism.io`,
@@ -42,7 +42,7 @@ const config: HardhatUserConfig = {
         ethereum: {
             accounts: [
                 process.env.OPTIMISM_PRIVATE_KEY ??
-                    '0xc0ffee254729296a45a3885639AC7E10F9d54979',
+                    'c0ffee254729296a45a3885639AC7E10F9d54979',
             ],
             chainId: 1,
             url: `https://ethereum-rpc.publicnode.com`,
@@ -50,7 +50,7 @@ const config: HardhatUserConfig = {
         arbitrum: {
             accounts: [
                 process.env.OPTIMISM_PRIVATE_KEY ??
-                    '0xc0ffee254729296a45a3885639AC7E10F9d54979',
+                    'c0ffee254729296a45a3885639AC7E10F9d54979',
             ],
             chainId: 42161,
             url: `https://arb1.arbitrum.io/rpc`,
@@ -58,7 +58,7 @@ const config: HardhatUserConfig = {
         base: {
             accounts: [
                 process.env.OPTIMISM_PRIVATE_KEY ??
-                    '0xc0ffee254729296a45a3885639AC7E10F9d54979',
+                    'c0ffee254729296a45a3885639AC7E10F9d54979',
             ],
             chainId: 8453,
             url: `https://mainnet.base.org`,
@@ -66,7 +66,7 @@ const config: HardhatUserConfig = {
         polygon: {
             accounts: [
                 process.env.OPTIMISM_PRIVATE_KEY ??
-                    '0xc0ffee254729296a45a3885639AC7E10F9d54979',
+                    'c0ffee254729296a45a3885639AC7E10F9d54979',
             ],
             chainId: 137,
             url: `https://polygon.api.onfinality.io/public`,
@@ -74,7 +74,7 @@ const config: HardhatUserConfig = {
         amoy: {
             accounts: [
                 process.env.OPTIMISM_PRIVATE_KEY ??
-                    '0xc0ffee254729296a45a3885639AC7E10F9d54979',
+                    'c0ffee254729296a45a3885639AC7E10F9d54979',
             ],
             chainId: 80002,
             url: `https://rpc-amoy.polygon.technology`,
@@ -86,13 +86,13 @@ const config: HardhatUserConfig = {
             gasMultiplier: 2,
             accounts: [
                 process.env.SEPOLIA_PRIVATE_KEY ??
-                    '0xc0ffee254729296a45a3885639AC7E10F9d54979',
+                    'c0ffee254729296a45a3885639AC7E10F9d54979',
             ],
         },
         optimism_sepolia: {
             accounts: [
                 process.env.SEPOLIA_PRIVATE_KEY ??
-                    '0xc0ffee254729296a45a3885639AC7E10F9d54979',
+                    'c0ffee254729296a45a3885639AC7E10F9d54979',
             ],
             chainId: 11155420,
             url: `https://sepolia.optimism.io`,
