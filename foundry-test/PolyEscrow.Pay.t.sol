@@ -30,6 +30,25 @@ contract PolyEscrowPlacePaymentTest is PolyEscrowTestBase {
         }));
     }
 
+    //cannot pay into a nonexistent escrow (InvalidEscrow)
+    function testCannotPayWhenPaused() public {
+        createEscrow(
+            payer1, 1 ether, EscrowPaymentType.Native,
+            payer2, 1 ether, EscrowPaymentType.ERC20
+        );
+
+        vm.prank(payer1);
+        escrow.pause();
+
+        vm.expectRevert(bytes("Paused"));
+        vm.prank(payer1);
+        escrow.placePayment(PaymentInput({
+            escrowId: testEscrowId,
+            currency: address(0),
+            amount: 1 ether
+        }));
+    }
+
     function createEscrow (
         address primaryAddress,
         uint256 primaryAmount,

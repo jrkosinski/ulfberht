@@ -6,6 +6,7 @@ import "../utility/CarefulMath.sol";
 import "../interfaces/ISystemSettings.sol";
 import "../interfaces/IPolyEscrow.sol";
 import "../utility/IsErc20.sol";
+import "../utility/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 //import "hardhat/console.sol";
 
@@ -32,7 +33,7 @@ struct EscrowParticipantInput {
     uint256 amount;                     //amount pledged  
 }
 
-contract PolyEscrow is HasSecurityContext, IPolyEscrow {
+contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
     mapping(bytes32 => EscrowDefinition) internal escrows;
     ISystemSettings public settings;
 
@@ -46,12 +47,9 @@ contract PolyEscrow is HasSecurityContext, IPolyEscrow {
         _;
     }
 
+    //Enforces that the escrow is not in arbitration
     modifier whenNotInArbitration(bytes32 escrowId) {
-        _;
-    }
-
-    modifier whenNotPaused() {
-        //require(!paused(), "Paused");
+        require(escrows[escrowId].status != EscrowStatus.Arbitration, "InvalidEscrowState");
         _;
     }
 
@@ -83,7 +81,7 @@ contract PolyEscrow is HasSecurityContext, IPolyEscrow {
     constructor(
         ISecurityContext securityContext, 
         ISystemSettings systemSettings
-    ) 
+    ) Pausable(securityContext) 
     {
         _setSecurityContext(securityContext);
         settings = systemSettings;

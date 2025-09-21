@@ -140,10 +140,10 @@ describe('PolyEscrow', function () {
             });
         });
 
-        describe.skip('Events', function () {
+        describe('Events', function () {
             it('emits EscrowCreated', async function () {
-                const amount = BigInt(10000000);
-                const isToken = false;
+                const amount1 = 10000001;
+                const amount2 = 20000002;
 
                 //create the escrow
                 const escrowId = ethers.keccak256('0x01');
@@ -151,20 +151,149 @@ describe('PolyEscrow', function () {
                 //escrow is logged in contract with right values
                 await expect(
                     polyEscrow.connect(testUtil.receivers[0]).createEscrow({
-                        currency: ethers.ZeroAddress,
                         id: escrowId,
-                        receiver: testUtil.receivers[0].address,
-                        payer: testUtil.payers[0].address,
-                        arbiters: [],
-                        quorum: 0,
-                        amount,
+                        primary: {
+                            participantAddress: testUtil.receivers[0].address,
+                            paymentType: PaymentType.ERC20,
+                            currency: testToken.target,
+                            amount: amount1,
+                        },
+                        secondary: {
+                            participantAddress: testUtil.receivers[1].address,
+                            paymentType: PaymentType.Native,
+                            currency: ethers.ZeroAddress,
+                            amount: amount2,
+                        },
                         startTime: 0,
                         endTime: 0,
-                        arbitrationModule: ethers.ZeroAddress,
+                        arbitration: {
+                            arbitrationModule: ethers.ZeroAddress,
+                            arbiters: [],
+                            quorum: 0,
+                        },
+                        fees: [],
                     })
                 )
                     .to.emit(polyEscrow, 'EscrowCreated')
                     .withArgs(escrowId);
+            });
+        });
+    });
+
+    describe('Place Payments', function () {
+        const escrowId = ethers.keccak256('0x01');
+        const amount1 = 10000002;
+        const amount2 = 20000002;
+        let escrow: EscrowDefinition;
+
+        this.beforeEach(async () => {
+            //escrow is created in contract with right values
+            escrow = await testUtil.createEscrow(
+                escrowId,
+                testUtil.payers[0],
+                {
+                    participantAddress: testUtil.receivers[0].address,
+                    paymentType: PaymentType.ERC20,
+                    currency: testToken.target,
+                    amount: amount1,
+                },
+                {
+                    participantAddress: testUtil.receivers[1].address,
+                    paymentType: PaymentType.Native,
+                    currency: ethers.ZeroAddress,
+                    amount: amount2,
+                }
+            );
+        });
+
+        describe('Happy Paths', function () {
+            it('can pay into an escrow with native currency', async function () {
+                await testUtil.placePayment(
+                    escrowId,
+                    testUtil.payers[0],
+                    amount2,
+                    false
+                );
+
+                //get the escrow
+                escrow = await testUtil.getEscrow(escrowId);
+
+                //verify escrow properties
+                testUtil.verifyEscrow(escrow, {
+                    id: escrowId,
+                    primary: {
+                        participantAddress: testUtil.receivers[0].address,
+                        paymentType: PaymentType.ERC20,
+                        currency: testToken.target,
+                        amountPledged: amount1,
+                        amountPaid: 0,
+                        amountReleased: 0,
+                        amountRefunded: 0,
+                    },
+                    secondary: {
+                        participantAddress: testUtil.receivers[1].address,
+                        paymentType: PaymentType.Native,
+                        currency: ethers.ZeroAddress,
+                        amountPledged: amount2,
+                        amountPaid: amount2,
+                        amountReleased: 0,
+                        amountRefunded: 0,
+                    },
+                    startTime: 0,
+                    endTime: 0,
+                });
+            });
+
+            it('can pay into an escrow with token currency', async function () {
+                await testUtil.placePayment(
+                    escrowId,
+                    testUtil.payers[0],
+                    amount1,
+                    true
+                );
+
+                //get the escrow
+                escrow = await testUtil.getEscrow(escrowId);
+
+                //verify escrow properties
+                testUtil.verifyEscrow(escrow, {
+                    id: escrowId,
+                    primary: {
+                        participantAddress: testUtil.receivers[0].address,
+                        paymentType: PaymentType.ERC20,
+                        currency: testToken.target,
+                        amountPledged: amount1,
+                        amountPaid: amount1,
+                        amountReleased: 0,
+                        amountRefunded: 0,
+                    },
+                    secondary: {
+                        participantAddress: testUtil.receivers[1].address,
+                        paymentType: PaymentType.Native,
+                        currency: ethers.ZeroAddress,
+                        amountPledged: amount2,
+                        amountPaid: 0,
+                        amountReleased: 0,
+                        amountRefunded: 0,
+                    },
+                    startTime: 0,
+                    endTime: 0,
+                });
+            });
+        });
+
+        describe('Events', function () {
+            it('emits PaymentRecived', async function () {
+                await expect(
+                    polyEscrow.placePayment(
+                        {
+                            escrowId: escrowId,
+                            currency: ethers.ZeroAddress,
+                            amount: amount1,
+                        },
+                        { value: amount1 }
+                    )
+                ).to.emit(polyEscrow, 'PaymentReceived');
             });
         });
     });
