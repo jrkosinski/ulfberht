@@ -8,7 +8,6 @@ import "../interfaces/IPolyEscrow.sol";
 import "../utility/IsErc20.sol";
 import "../utility/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-//import "hardhat/console.sol";
 
 uint8 constant MAX_RELAY_NODES_PER_ESCROW = 10; // Max number of relay nodes allowed per escrow
 
@@ -290,6 +289,26 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         if (escrow.status == EscrowStatus.Pending)
             escrow.status = EscrowStatus.Active;
 
+        //if native, verify the amount sent is correct 
+        if (payer.paymentType == EscrowPaymentType.Native) {
+            //EXCEPTION: InvalidAmount
+            require(msg.value >= paymentInput.amount, "InvalidAmount");
+        }
+
+        //if token, transfer the specified amount in 
+        else if (payer.paymentType == EscrowPaymentType.ERC20) {
+            //transfer the tokens in 
+            IERC20 token = IERC20(payer.currency);
+            bool success = token.transferFrom(msg.sender, address(this), paymentInput.amount);
+
+            //EXCEPTION: TokenPaymentFailed
+            require(success, "TokenPaymentFailed");
+        }
+        //TODO: if NFT, transfer the NFT to self
+        else if (payer.paymentType == EscrowPaymentType.ERC721) {
+        }
+
+
         //increment the amount paid for the participant
         EscrowParticipant storage participant = 
             (payer.participantAddress == escrow.primary.participantAddress) ? 
@@ -425,7 +444,7 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         _releaseEscrowOneSide(escrow, escrow.secondary, 0);
     }
 
-    function _releaseEscrowOneSide(EscrowDefinition storage escrow, EscrowParticipant memory participant, uint256 amount) internal {
+    function _releaseEscrowOneSide(EscrowDefinition storage escrow, EscrowParticipant storage participant, uint256 amount) internal {
         uint256 activeAmount = _getEscrowAmountRemaining(participant);
 
         //EXCEPTION: AmountExceeded
@@ -441,10 +460,13 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
             //transfer the amount to the other party
             _transferAmount(participant, recipients[n], participant.currency, amounts[n]);
         }
+
+        //record the amount released
+        participant.amountReleased += amount;
     }
 
     function _calculatePaymentAmounts(EscrowDefinition storage escrow, EscrowParticipant memory participant, uint256 amount) 
-        internal returns(address[] memory, uint256[] memory) {
+        internal view returns(address[] memory, uint256[] memory) {
         
         address[] memory recipients = new address[](escrow.fees.length + 1);
         uint256[] memory amounts = new uint256[](escrow.fees.length + 1);
@@ -500,3 +522,12 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         return participant.amountPaid - participant.amountRefunded - participant.amountReleased;
     }
 }
+
+
+/*
+
+0. flu + new project 
+1. released 
+2. did I ever do that thing? 
+
+*/

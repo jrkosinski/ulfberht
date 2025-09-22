@@ -214,55 +214,95 @@ export class TestUtil {
     public verifyEscrow(escrow: EscrowDefinition, expectedValues: any) {
         if (expectedValues.id) expect(escrow.id).to.equal(expectedValues.id);
 
-        /*
-        if (expectedValues.payer)
-            expect(escrow.payer).to.equal(expectedValues.payer);
-        if (expectedValues.receiver)
-            expect(escrow.receiver).to.equal(expectedValues.receiver);
-        if (expectedValues.amount != undefined)
-            expect(BigInt(escrow.amount)).to.equal(
-                BigInt(expectedValues.amount)
-            );
-        if (expectedValues.amountRefunded != undefined)
-            expect(BigInt(escrow.amountRefunded)).to.equal(
-                BigInt(expectedValues.amountRefunded)
-            );
-        if (expectedValues.amountReleased != undefined)
-            expect(BigInt(escrow.amountReleased)).to.equal(
-                BigInt(expectedValues.amountReleased)
-            );
-        if (expectedValues.amountPaid != undefined)
-            expect(BigInt(escrow.amountPaid)).to.equal(
-                BigInt(expectedValues.amountPaid)
-            );
-        if (expectedValues.currency)
-            expect(escrow.currency).to.equal(expectedValues.currency);
-        if (expectedValues.receiverReleased != undefined)
-            expect(escrow.receiverReleased).to.equal(
-                expectedValues.receiverReleased
-            );
-        if (expectedValues.payerReleased != undefined)
-            expect(escrow.payerReleased).to.equal(expectedValues.payerReleased);
-        if (expectedValues.released != undefined)
-            expect(escrow.released).to.equal(expectedValues.released);
-        if (expectedValues.fullyPaid != undefined)
-            expect(escrow.fullyPaid).to.equal(expectedValues.fullyPaid);
+        if (expectedValues.primary) {
+            if (expectedValues.primary.participantAddress)
+                expect(escrow.primary.participantAddress).to.equal(
+                    expectedValues.primary.participantAddress
+                );
+            if (expectedValues.primary.currency)
+                expect(escrow.primary.currency).to.equal(
+                    expectedValues.primary.currency
+                );
+            if (expectedValues.primary.paymentType)
+                expect(escrow.primary.paymentType).to.equal(
+                    expectedValues.primary.paymentType
+                );
+            if (expectedValues.primary.amountPledged)
+                expect(escrow.primary.amountPledged).to.equal(
+                    expectedValues.primary.amountPledged
+                );
+            if (expectedValues.primary.amountPaid)
+                expect(escrow.primary.amountPaid).to.equal(
+                    expectedValues.primary.amountPaid
+                );
+            if (expectedValues.primary.amountReleased)
+                expect(escrow.primary.amountReleased).to.equal(
+                    expectedValues.primary.amountReleased
+                );
+            if (expectedValues.primary.amountRefunded)
+                expect(escrow.primary.amountRefunded).to.equal(
+                    expectedValues.primary.amountRefunded
+                );
+        }
+
+        if (expectedValues.secondary) {
+            if (expectedValues.secondary.participantAddress)
+                expect(escrow.secondary.participantAddress).to.equal(
+                    expectedValues.secondary.participantAddress
+                );
+            if (expectedValues.secondary.currency)
+                expect(escrow.secondary.currency).to.equal(
+                    expectedValues.secondary.currency
+                );
+            if (expectedValues.secondary.paymentType)
+                expect(escrow.secondary.paymentType).to.equal(
+                    expectedValues.secondary.paymentType
+                );
+            if (expectedValues.secondary.amountPledged)
+                expect(escrow.secondary.amountPledged).to.equal(
+                    expectedValues.secondary.amountPledged
+                );
+            if (expectedValues.secondary.amountPaid)
+                expect(escrow.secondary.amountPaid).to.equal(
+                    expectedValues.secondary.amountPaid
+                );
+            if (expectedValues.secondary.amountReleased)
+                expect(escrow.secondary.amountReleased).to.equal(
+                    expectedValues.secondary.amountReleased
+                );
+            if (expectedValues.secondary.amountRefunded)
+                expect(escrow.secondary.amountRefunded).to.equal(
+                    expectedValues.secondary.amountRefunded
+                );
+        }
+
+        if (expectedValues.timestamp != undefined)
+            expect(escrow.timestamp).to.equal(expectedValues.timestamp);
         if (expectedValues.startTime != undefined)
             expect(escrow.startTime).to.equal(expectedValues.startTime);
         if (expectedValues.endTime != undefined)
             expect(escrow.endTime).to.equal(expectedValues.endTime);
         if (expectedValues.status != undefined)
             expect(escrow.status).to.equal(expectedValues.status);
-        if (expectedValues.quorum != undefined)
-            expect(escrow.quorum).to.equal(expectedValues.quorum);
-        if (expectedValues.arbiters) {
-            expect(escrow.arbiters?.length ?? 0).to.equal(
-                expectedValues.arbiters.length
-            );
-            for (let n = 0; n < escrow.arbiters.length; n++) {
-                expect(escrow.arbiters[n]).to.equal(expectedValues.arbiters[n]);
+        if (expectedValues.arbitration) {
+            //TODO: arbitration
+            if (expectedValues.arbitration.arbitrationModule) {
+                //expect(escrow.arbitration.arbitrationModule).to.equal(
+                //    expectedValues.arbitration.arbitrationModule
+                //);
+            }
+            if (expectedValues.arbitration.arbiters) {
+                //expect(escrow.arbitration.arbitrationModule).to.equal(
+                //    expectedValues.arbitration.arbitrationModule
+                //);
+            }
+            if (expectedValues.arbitration.quorum) {
+                //expect(escrow.arbitration.arbitrationModule).to.equal(
+                //    expectedValues.arbitration.arbitrationModule
+                //);
             }
         }
-        */
+
+        //TODO: fees
     }
 }

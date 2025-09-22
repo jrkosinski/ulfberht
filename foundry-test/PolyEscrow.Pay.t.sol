@@ -49,6 +49,10 @@ contract PolyEscrowPlacePaymentTest is PolyEscrowTestBase {
         }));
     }
 
+    //what happens when you pay more than the required amount?
+
+    //what happens if you pay in the wrong currency?
+
     function createEscrow (
         address primaryAddress,
         uint256 primaryAmount,

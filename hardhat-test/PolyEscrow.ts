@@ -284,7 +284,88 @@ describe('PolyEscrow', function () {
                 });
             });
 
-            it.skip('when escrow is fully paid, it is automatically released', async function () {});
+            it('when escrow is fully paid, it is automatically released', async function () {
+                //pay into one side of the escrow
+                await testUtil.placePayment(
+                    escrowId,
+                    testUtil.payers[0],
+                    amount1,
+                    true
+                );
+
+                expect(
+                    await testToken.balanceOf(testUtil.receivers[0].address)
+                ).to.equal(0);
+                expect(await testToken.balanceOf(polyEscrow.target)).to.equal(
+                    amount1
+                );
+
+                //get the escrow
+                escrow = await testUtil.getEscrow(escrowId);
+
+                //verify escrow properties
+                testUtil.verifyEscrow(escrow, {
+                    id: escrowId,
+                    primary: {
+                        participantAddress: testUtil.receivers[0].address,
+                        paymentType: PaymentType.ERC20,
+                        currency: testToken.target,
+                        amountPledged: amount1,
+                        amountPaid: amount1,
+                        amountReleased: 0,
+                        amountRefunded: 0,
+                    },
+                    secondary: {
+                        participantAddress: testUtil.receivers[1].address,
+                        paymentType: PaymentType.Native,
+                        currency: ethers.ZeroAddress,
+                        amountPledged: amount2,
+                        amountPaid: 0,
+                        amountReleased: 0,
+                        amountRefunded: 0,
+                    },
+                    startTime: 0,
+                    endTime: 0,
+                    status: EscrowStatus.Active,
+                });
+
+                //pay into the other side of the escrow
+                await testUtil.placePayment(
+                    escrowId,
+                    testUtil.payers[1],
+                    amount2,
+                    false
+                );
+
+                //get the escrow
+                escrow = await testUtil.getEscrow(escrowId);
+
+                //verify escrow properties
+                testUtil.verifyEscrow(escrow, {
+                    id: escrowId,
+                    primary: {
+                        participantAddress: testUtil.receivers[0].address,
+                        paymentType: PaymentType.ERC20,
+                        currency: testToken.target,
+                        amountPledged: amount1,
+                        amountPaid: amount1,
+                        amountReleased: amount1,
+                        amountRefunded: 0,
+                    },
+                    secondary: {
+                        participantAddress: testUtil.receivers[1].address,
+                        paymentType: PaymentType.Native,
+                        currency: ethers.ZeroAddress,
+                        amountPledged: amount2,
+                        amountPaid: 0,
+                        amountReleased: amount2,
+                        amountRefunded: 0,
+                    },
+                    startTime: 0,
+                    endTime: 0,
+                    status: EscrowStatus.Active,
+                });
+            });
         });
 
         describe('Events', function () {
