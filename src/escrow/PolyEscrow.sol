@@ -417,6 +417,86 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         }
     }
 
-    function _releaseEscrow(bytes32 escrowId) internal pure {
+    function _releaseEscrow(bytes32 escrowId) internal {
+        EscrowDefinition storage escrow = escrows[escrowId]; 
+
+        //release for both sides
+        _releaseEscrowOneSide(escrow, escrow.primary, 0);
+        _releaseEscrowOneSide(escrow, escrow.secondary, 0);
+    }
+
+    function _releaseEscrowOneSide(EscrowDefinition storage escrow, EscrowParticipant memory participant, uint256 amount) internal {
+        uint256 activeAmount = _getEscrowAmountRemaining(participant);
+
+        //EXCEPTION: AmountExceeded
+        require(amount <= activeAmount, "AmountExceeded"); //NOT COVERABLE
+        if (amount == 0)
+            amount = activeAmount;
+
+        //calculate fee, and amount to release
+        (address[] memory recipients, uint256[] memory amounts) = _calculatePaymentAmounts(escrow, participant, amount);
+
+        //now for each recipient, transfer the amount
+        for(uint n=0; n<recipients.length; n++) {
+            //transfer the amount to the other party
+            _transferAmount(participant, recipients[n], participant.currency, amounts[n]);
+        }
+    }
+
+    function _calculatePaymentAmounts(EscrowDefinition storage escrow, EscrowParticipant memory participant, uint256 amount) 
+        internal returns(address[] memory, uint256[] memory) {
+        
+        address[] memory recipients = new address[](escrow.fees.length + 1);
+        uint256[] memory amounts = new uint256[](escrow.fees.length + 1);
+        
+        //ok first, we shall have the base amount paid to other participant, the counterparty
+        recipients[0] = (participant.participantAddress == escrow.primary.participantAddress) ? 
+            escrow.secondary.participantAddress : 
+            escrow.primary.participantAddress;
+        amounts[0] = amount;
+
+        //next we must go through each fee and calculate it
+        for(uint8 n=0; n<escrow.fees.length; n++) {
+            recipients[n+1] = escrow.fees[n].recipient;
+            amounts[n+1] = CarefulMath.mulDiv(amount, escrow.fees[n].feeBps, 10000);
+
+            //and subtract that amount from what the recipient will get 
+            amounts[0] -= amounts[n+1];
+        }
+
+        return (recipients, amounts);
+    }
+
+    function _transferAmount(EscrowParticipant memory from, address to, address tokenAddressOrZero, uint256 amount) internal returns (bool) {
+        bool success = false;
+
+        //TODO: handle NFTs, Bitcoin, and Custom
+
+        //EXCEPTION: InvalidAmount
+        require(_getEscrowAmountRemaining(from) >= amount, "AmountExceeded"); //NOT COVERED
+
+        if (amount > 0) {
+            if (tokenAddressOrZero == address(0)) {
+                (success,) = payable(to).call{value: amount}("");
+            } 
+            else {
+                IERC20 token = IERC20(tokenAddressOrZero); 
+                success = token.transfer(to, amount);
+            }
+
+            if (success) {
+                //TODO: do thise
+                //emit PaymentTransferred(escrowId, to, amount); //NOT COVERED
+            }
+            else {
+                revert("PaymentTransferFailed"); //NOT COVERED
+            }
+        }
+
+        return success;
+    }
+
+    function _getEscrowAmountRemaining(EscrowParticipant memory participant) internal pure returns (uint256) {
+        return participant.amountPaid - participant.amountRefunded - participant.amountReleased;
     }
 }
