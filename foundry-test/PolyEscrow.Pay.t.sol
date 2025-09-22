@@ -49,9 +49,45 @@ contract PolyEscrowPlacePaymentTest is PolyEscrowTestBase {
         }));
     }
 
-    //what happens when you pay more than the required amount?
+    //cannot pay with an incorrect token currency (InvalidCurrency)
+    function testCannotPayWithWrongCurrency() public {
+        createEscrow(
+            payer1, 1 ether, EscrowPaymentType.Native,
+            payer2, 1 ether, EscrowPaymentType.ERC20
+        );
 
-    //what happens if you pay in the wrong currency?
+        vm.prank(payer1);
+        //approve first
+        testToken2.approve(address(escrow), 1 ether);
+
+        vm.expectRevert(bytes("InvalidCurrency"));
+        escrow.placePayment(PaymentInput({
+            escrowId: testEscrowId,
+            currency: address(testToken2),
+            amount: 1 ether
+        }));
+    }
+
+    //cannot pay with zero amount of token currency (InvalidAmount)
+    function testCannotPayWithZeroAmount() public {
+        createEscrow(
+            payer1, 1 ether, EscrowPaymentType.Native,
+            payer2, 1 ether, EscrowPaymentType.ERC20
+        );
+
+        vm.prank(payer1);
+        //approve first
+        testToken1.approve(address(escrow), 1 ether);
+
+        vm.expectRevert(bytes("InvalidAmount"));
+        escrow.placePayment(PaymentInput({
+            escrowId: testEscrowId,
+            currency: address(testToken2),
+            amount: 0
+        }));
+    }
+
+    //what happens when you pay more than the required amount?
 
     function createEscrow (
         address primaryAddress,

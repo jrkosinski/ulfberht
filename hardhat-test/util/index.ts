@@ -37,11 +37,17 @@ export interface EscrowDefinition {
     status: number;
 
     //arbitration
-    //ArbitrationDefinition arbitration;
+    arbitration: ArbitrationDefinition;
 
     //fees
     //TODO: fees for ERC721 doesn't make sense. Should only be for ERC20 and Native. But what about bitcoin?
     fees: FeeDefinition[];
+}
+
+export interface ArbitrationDefinition {
+    arbitrationModule: string; //address of arbitration module
+    arbiters: string[]; //list of arbiters
+    quorum: number; //number of arbiters required to rule
 }
 
 export interface EscrowParticipantInput {
@@ -76,8 +82,12 @@ export function convertEscrow(rawData: any[]): EscrowDefinition {
         startTime: Number(rawData[4]),
         endTime: Number(rawData[5]),
         status: Number(rawData[6]),
-        //arbitration: { module: rawData[8], data: rawData[7] },
-        fees: rawData[8], //TODO
+        arbitration: {
+            arbitrationModule: rawData[7][0],
+            arbiters: rawData[7][1],
+            quorum: rawData[7][2],
+        },
+        fees: rawData[8],
     };
 
     return output;
@@ -214,6 +224,14 @@ export class TestUtil {
     public verifyEscrow(escrow: EscrowDefinition, expectedValues: any) {
         if (expectedValues.id) expect(escrow.id).to.equal(expectedValues.id);
 
+        const arraysAreEqual = (a: any[], b: any[]) => {
+            if (a.length !== b.length) return false;
+            for (let i = 0; i < a.length; i++) {
+                if (a[i] !== b[i]) return false;
+            }
+            return true;
+        };
+
         if (expectedValues.primary) {
             if (expectedValues.primary.participantAddress)
                 expect(escrow.primary.participantAddress).to.equal(
@@ -285,24 +303,27 @@ export class TestUtil {
         if (expectedValues.status != undefined)
             expect(escrow.status).to.equal(expectedValues.status);
         if (expectedValues.arbitration) {
-            //TODO: arbitration
             if (expectedValues.arbitration.arbitrationModule) {
-                //expect(escrow.arbitration.arbitrationModule).to.equal(
-                //    expectedValues.arbitration.arbitrationModule
-                //);
-            }
-            if (expectedValues.arbitration.arbiters) {
-                //expect(escrow.arbitration.arbitrationModule).to.equal(
-                //    expectedValues.arbitration.arbitrationModule
-                //);
+                expect(escrow.arbitration.arbitrationModule).to.equal(
+                    expectedValues.arbitration.arbitrationModule
+                );
             }
             if (expectedValues.arbitration.quorum) {
-                //expect(escrow.arbitration.arbitrationModule).to.equal(
-                //    expectedValues.arbitration.arbitrationModule
-                //);
+                expect(escrow.arbitration.quorum).to.equal(
+                    expectedValues.arbitration.quorum
+                );
+            }
+            if (expectedValues.arbitration.arbiters) {
+                expect(
+                    arraysAreEqual(
+                        escrow.arbitration.arbiters,
+                        expectedValues.arbitration.arbiters
+                    )
+                ).to.be.true;
             }
         }
-
-        //TODO: fees
+        if (expectedValues.fees) {
+            expect(arraysAreEqual(escrow.fees, expectedValues.fees)).to.be.true;
+        }
     }
 }
