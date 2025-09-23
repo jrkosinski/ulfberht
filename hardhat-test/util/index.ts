@@ -1,7 +1,8 @@
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumberish } from 'ethers';
-import { ethers } from 'hardhat';
+import hre, { ethers } from 'hardhat';
+import { TestToken__factory } from '../../typechain-types';
 
 export interface EscrowParticipant {
     participantAddress: string;
@@ -109,7 +110,10 @@ export const PaymentType = {
 };
 
 export class TestUtil {
-    public testToken: any;
+    public testToken1: any;
+    public testToken2: any;
+    public testNft1: any;
+    public testNft2: any;
     public polyEscrow: any;
     public payers: HardhatEthersSigner[];
     public receivers: HardhatEthersSigner[];
@@ -118,10 +122,16 @@ export class TestUtil {
 
     constructor(
         polyEscrow: any,
-        testToken: any,
+        testToken1: any,
+        testToken2: any,
+        testNft1: any,
+        testNft2: any,
         signers: HardhatEthersSigner[]
     ) {
-        this.testToken = testToken;
+        this.testToken1 = testToken1;
+        this.testToken2 = testToken2;
+        this.testNft1 = testNft1;
+        this.testNft2 = testNft2;
         this.polyEscrow = polyEscrow;
         this.signers = signers;
 
@@ -136,40 +146,42 @@ export class TestUtil {
         ];
     }
 
-    /**
-     * Places a payment in the escrow.
-     * @param escrowId The ID of the escrow.
-     * @param payerAccount The account making the payment.
-     * @param amount The amount to be paid.
-     * @param isToken Whether the payment is in tokens or native currency.
-     * @returns The updated escrow object.
-     */
     public async placePayment(
         escrowId: string,
         payerAccount: HardhatEthersSigner,
         amount: BigNumberish,
-        isToken: boolean = false
+        currency: string = ''
     ): Promise<EscrowDefinition> {
-        if (isToken) {
-            await this.testToken
+        //take care of approvals
+        if (currency === this.testToken1.target) {
+            await this.testToken1
                 .connect(payerAccount)
                 .approve(this.polyEscrow.target, amount);
-
-            await this.polyEscrow.connect(payerAccount).placePayment({
-                escrowId: escrowId,
-                currency: this.testToken.target,
-                amount,
-            });
+        } else if (currency === this.testToken2.target) {
+            await this.testToken2
+                .connect(payerAccount)
+                .approve(this.polyEscrow.target, amount);
+        } else if (currency === this.testNft1.target) {
+            await this.testNft1
+                .connect(payerAccount)
+                .approve(this.polyEscrow.target, amount);
+        } else if (currency === this.testNft2.target) {
+            await this.testNft2
+                .connect(payerAccount)
+                .approve(this.polyEscrow.target, amount);
         } else {
-            await this.polyEscrow.connect(payerAccount).placePayment(
-                {
-                    escrowId: escrowId,
-                    currency: ethers.ZeroAddress,
-                    amount,
-                },
-                { value: amount }
-            );
+            currency = ethers.ZeroAddress;
         }
+
+        //place the payment
+        await this.polyEscrow.connect(payerAccount).placePayment(
+            {
+                escrowId: escrowId,
+                currency,
+                amount,
+            },
+            { value: currency === ethers.ZeroAddress ? amount : 0 }
+        );
 
         //return escrow
         const escrow = convertEscrow(await this.polyEscrow.getEscrow(escrowId));
@@ -211,10 +223,15 @@ export class TestUtil {
         return convertEscrow(await this.polyEscrow.getEscrow(escrowId));
     }
 
-    public async getBalance(address: any, isToken = false) {
-        return isToken
-            ? await this.testToken.balanceOf(address)
-            : await this.signers[0].provider.getBalance(address);
+    public async getBalance(
+        address: any,
+        currency: string = ethers.ZeroAddress
+    ) {
+        return address === ethers.ZeroAddress
+            ? await this.signers[0].provider.getBalance(address)
+            : (await hre.ethers.getContractAt('IERC20', currency)).balanceOf(
+                  address
+              );
     }
 
     public async getBalanceOf(address: any, token: any) {

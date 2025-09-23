@@ -8,6 +8,8 @@ import "../interfaces/IPolyEscrow.sol";
 import "../utility/IsErc20.sol";
 import "../utility/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "hardhat/console.sol";
 
 uint8 constant MAX_RELAY_NODES_PER_ESCROW = 10; // Max number of relay nodes allowed per escrow
 
@@ -304,8 +306,10 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
             //EXCEPTION: TokenPaymentFailed
             require(success, "TokenPaymentFailed");
         }
-        //TODO: if NFT, transfer the NFT to self
+        //if NFT, transfer the NFT to self
         else if (payer.paymentType == EscrowPaymentType.ERC721) {
+            IERC721 token = IERC721(payer.currency);
+            token.transferFrom(msg.sender, address(this), paymentInput.amount);
         }
 
 
@@ -477,13 +481,18 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
             escrow.primary.participantAddress;
         amounts[0] = amount;
 
-        //next we must go through each fee and calculate it
-        for(uint8 n=0; n<escrow.fees.length; n++) {
-            recipients[n+1] = escrow.fees[n].recipient;
-            amounts[n+1] = CarefulMath.mulDiv(amount, escrow.fees[n].feeBps, 10000);
+        //we're only calculating fees for ERC20 and Native payments
+        if (participant.paymentType == EscrowPaymentType.ERC20 ||
+            participant.paymentType == EscrowPaymentType.Native) {
 
-            //and subtract that amount from what the recipient will get 
-            amounts[0] -= amounts[n+1];
+            //next we must go through each fee and calculate it
+            for(uint8 n=0; n<escrow.fees.length; n++) {
+                recipients[n+1] = escrow.fees[n].recipient;
+                amounts[n+1] = CarefulMath.mulDiv(amount, escrow.fees[n].feeBps, 10000);
+
+                //and subtract that amount from what the recipient will get 
+                amounts[0] -= amounts[n+1];
+            }
         }
 
         return (recipients, amounts);
@@ -501,9 +510,14 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
             if (tokenAddressOrZero == address(0)) {
                 (success,) = payable(to).call{value: amount}("");
             } 
-            else {
+            else if (from.paymentType == EscrowPaymentType.ERC20) {
                 IERC20 token = IERC20(tokenAddressOrZero); 
                 success = token.transfer(to, amount);
+            }
+            else if (from.paymentType == EscrowPaymentType.ERC721) {
+                IERC721 token = IERC721(tokenAddressOrZero); 
+                token.transferFrom(address(this), to, 1);
+                success = true;
             }
 
             if (success) {
