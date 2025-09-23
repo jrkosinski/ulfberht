@@ -9,7 +9,7 @@ import "../utility/IsErc20.sol";
 import "../utility/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 
 uint8 constant MAX_RELAY_NODES_PER_ESCROW = 10; // Max number of relay nodes allowed per escrow
 
