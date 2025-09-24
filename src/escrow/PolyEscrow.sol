@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
+import "./RelayNode.sol"; 
 import "../security/HasSecurityContext.sol"; 
 import "../utility/CarefulMath.sol";
 import "../interfaces/ISystemSettings.sol";
@@ -36,6 +37,7 @@ struct EscrowParticipantInput {
 
 contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
     mapping(bytes32 => EscrowDefinition) internal escrows;
+    mapping(bytes32 => RelayNode[]) internal relayNodes;
     ISystemSettings public settings;
 
     // -----------
@@ -70,6 +72,12 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         address currency,
         EscrowPaymentType paymentType,
         uint256 amount 
+    );
+
+    //raised when a relay node has been successfully deployed.
+    event RelayNodeDeployed (
+        address indexed relayAddress,
+        bytes32 indexed escrowId
     );
 
     
@@ -312,7 +320,6 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
             token.transferFrom(msg.sender, address(this), paymentInput.amount);
         }
 
-
         //increment the amount paid for the participant
         EscrowParticipant storage participant = 
             (payer.participantAddress == escrow.primary.participantAddress) ? 
@@ -334,6 +341,46 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
             payer.paymentType,
             paymentInput.amount
         );
+    }
+
+    /**
+     * @dev Deploys a relay node associated with the given escrow and this contract. A relay node allows for payment 
+     * into the escrow via a direct payment to an address (the relay node address), as an alternative to calling 
+     * this contract's placePayment method and passing all of the correct parameters. It's a convenience feature 
+     * for users (direct wallet transfer as opposed to dealing with the complexity of a smart contract method call).
+     * In the end, the relay node ends up calling the placePayment method with the correct parameters.
+     * 
+     * Reverts: 
+     * - InvalidEscrow
+     * - InvalidEscrowState
+     * - MaxRelayNodesExceeded
+     * 
+     * Emits: 
+     * - RelayNodeDeployed
+     * 
+     * @param escrowId The unique escrow id to associate with the relay node.
+     * @param autoForwardNative Whether to automatically forward native currency payments.
+     */
+    function deployRelayNode(bytes32 escrowId, bool autoForwardNative) 
+        whenNotPaused whenNotCompleted(escrowId) whenNotInArbitration(escrowId) external {
+            
+        //EXCEPTION: InvalidEscrow
+        require(hasEscrow(escrowId), "InvalidEscrow");
+
+        //EXCEPTION: MaxRelayNodesExceeded
+        require(relayNodes[escrowId].length < MAX_RELAY_NODES_PER_ESCROW, "MaxRelayNodesExceeded");
+
+        //deploy the relay node
+        RelayNode relayNode = new RelayNode(
+            securityContext,
+            IPolyEscrow(this),
+            escrowId,
+            autoForwardNative
+        );
+        relayNodes[escrowId].push(relayNode);
+
+        //EVENT: RelayNodeDeployed
+        emit RelayNodeDeployed(address(relayNode), escrowId);
     }
     
 

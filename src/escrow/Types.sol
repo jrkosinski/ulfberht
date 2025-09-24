@@ -128,6 +128,7 @@ struct ArbitrationDefinition {
  * amountReleased: how much has been released to the other party
  * amountRefunded: how much has been refunded back to the payer
  */
+//TODO: change terminology to "side" or "leg"
 struct EscrowParticipant {
     address participantAddress;
     address currency;               //ignored if paymentType not ERC20 or ERC721
