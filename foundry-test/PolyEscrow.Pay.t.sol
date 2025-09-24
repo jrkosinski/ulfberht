@@ -34,7 +34,7 @@ contract PolyEscrowPlacePaymentTest is PolyEscrowTestBase {
     function testCannotPayWhenPaused() public {
         createEscrow(
             payer1, 1 ether, EscrowPaymentType.Native,
-            payer2, 1 ether, EscrowPaymentType.ERC20
+            payer2, 1_000_000_000, EscrowPaymentType.ERC20
         );
 
         vm.prank(payer1);
@@ -53,18 +53,18 @@ contract PolyEscrowPlacePaymentTest is PolyEscrowTestBase {
     function testCannotPayWithWrongCurrency() public {
         createEscrow(
             payer1, 1 ether, EscrowPaymentType.Native,
-            payer2, 1 ether, EscrowPaymentType.ERC20
+            payer2, 1_000_000_000, EscrowPaymentType.ERC20
         );
 
         vm.prank(payer1);
         //approve first
-        testToken2.approve(address(escrow), 1 ether);
+        testToken2.approve(address(escrow), 1_000_000_000);
 
         vm.expectRevert(bytes("InvalidCurrency"));
         escrow.placePayment(PaymentInput({
             escrowId: testEscrowId,
             currency: address(testToken2),
-            amount: 1 ether
+            amount: 1_000_000_000
         }));
     }
 
@@ -72,12 +72,12 @@ contract PolyEscrowPlacePaymentTest is PolyEscrowTestBase {
     function testCannotPayWithZeroAmount() public {
         createEscrow(
             payer1, 1 ether, EscrowPaymentType.Native,
-            payer2, 1 ether, EscrowPaymentType.ERC20
+            payer2, 1_000_000_000, EscrowPaymentType.ERC20
         );
 
         vm.prank(payer1);
         //approve first
-        testToken1.approve(address(escrow), 1 ether);
+        testToken1.approve(address(escrow), 1_000_000_000);
 
         vm.expectRevert(bytes("InvalidAmount"));
         escrow.placePayment(PaymentInput({
@@ -87,7 +87,7 @@ contract PolyEscrowPlacePaymentTest is PolyEscrowTestBase {
         }));
     }
 
-    //what happens when you pay more than the required amount?
+    //TODO: what happens when you pay more than the required amount?
 
     function createEscrow (
         address primaryAddress,

@@ -70,17 +70,17 @@ contract PolyEscrowTestBase is Test {
         testToken2 = new TestToken("XYZ", "ZYX");
         escrow = new PolyEscrow(ISecurityContext(securityContext), systemSettings);
 
-        testToken1.mint(nonOwner, 10_000_000_000);
-        testToken1.mint(payer1, 10_000_000_000);
-        testToken1.mint(payer2, 10_000_000_000);
+        testToken1.mint(nonOwner, 10_000_000_000_000);
+        testToken1.mint(payer1, 10_000_000_000_000);
+        testToken1.mint(payer2, 10_000_000_000_000);
 
-        testToken2.mint(nonOwner, 10_000_000_000);
-        testToken2.mint(payer1, 10_000_000_000);
-        testToken2.mint(payer2, 10_000_000_000);
+        testToken2.mint(nonOwner, 10_000_000_000_000);
+        testToken2.mint(payer1, 10_000_000_000_000);
+        testToken2.mint(payer2, 10_000_000_000_000);
         vm.stopPrank();
 
         // Initialize test values
-        testAmount = 1 ether;
+        testAmount = 1_000_000_000;
         testEscrowId = keccak256("test-payment");
     }
 

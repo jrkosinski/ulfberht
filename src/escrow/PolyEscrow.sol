@@ -363,7 +363,7 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
      */
     function deployRelayNode(bytes32 escrowId, bool autoForwardNative) 
         whenNotPaused whenNotCompleted(escrowId) whenNotInArbitration(escrowId) external {
-            
+
         //EXCEPTION: InvalidEscrow
         require(hasEscrow(escrowId), "InvalidEscrow");
 
@@ -493,6 +493,8 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         //release for both sides
         _releaseEscrowOneSide(escrow, escrow.primary, 0);
         _releaseEscrowOneSide(escrow, escrow.secondary, 0);
+
+        escrow.status = EscrowStatus.Completed;
     }
 
     function _releaseEscrowOneSide(EscrowDefinition storage escrow, EscrowParticipant storage participant, uint256 amount) internal {
