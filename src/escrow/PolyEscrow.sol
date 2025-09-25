@@ -20,15 +20,15 @@ uint8 constant MAX_RELAY_NODES_PER_ESCROW = 10; // Max number of relay nodes all
 
 struct CreateEscrowInput {
     bytes32 id;                         //Unique identifier for the escrow
-    EscrowParticipantInput primary;     //Details of the first party
-    EscrowParticipantInput secondary;   //Details of the second party
+    EscrowLegInput primary;     //Details of the first party
+    EscrowLegInput secondary;   //Details of the second party
     uint256 startTime;                  //Optional start time for the escrow (0 if none)
     uint256 endTime;                    //Optional end time for the escrow (0 if none)
     ArbitrationDefinition arbitration;  //Arbitration details
     FeeDefinition[] fees;               //Fees to be applied on payments
 }
 
-struct EscrowParticipantInput {
+struct EscrowLegInput {
     address participantAddress;         
     address currency;                   //token address, or 0x0 for native
     EscrowPaymentType paymentType;      
@@ -171,7 +171,7 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         escrow.id = input.id;
 
         //add primary participant
-        escrow.primary = EscrowParticipant({
+        escrow.primary = EscrowLeg({
             participantAddress: input.primary.participantAddress,
             currency: input.primary.currency,
             paymentType: input.primary.paymentType,
@@ -182,7 +182,7 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         });
 
         //add secondary participant
-        escrow.secondary = EscrowParticipant({
+        escrow.secondary = EscrowLeg({
             participantAddress: input.secondary.participantAddress,
             currency: input.secondary.currency,
             paymentType: input.secondary.paymentType,
@@ -260,7 +260,7 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
 
         //get the escrow 
         EscrowDefinition storage escrow = escrows[paymentInput.escrowId];
-        EscrowParticipant memory payer;
+        EscrowLeg memory payer;
 
         //figure out by the currency, which participant is paying
         if (escrow.primary.paymentType == EscrowPaymentType.Native) {
@@ -320,12 +320,12 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
             token.transferFrom(msg.sender, address(this), paymentInput.amount);
         }
 
-        //increment the amount paid for the participant
-        EscrowParticipant storage participant = 
+        //increment the amount paid for the leg
+        EscrowLeg storage leg = 
             (payer.participantAddress == escrow.primary.participantAddress) ? 
                 escrow.primary : 
                 escrow.secondary;
-        participant.amountPaid += paymentInput.amount;
+        leg.amountPaid += paymentInput.amount;
 
         //if escrow now fully paid, release it 
         if (escrow.primary.amountPaid >= escrow.primary.amountPledged &&
@@ -497,8 +497,8 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         escrow.status = EscrowStatus.Completed;
     }
 
-    function _releaseEscrowOneSide(EscrowDefinition storage escrow, EscrowParticipant storage participant, uint256 amount) internal {
-        uint256 activeAmount = _getEscrowAmountRemaining(participant);
+    function _releaseEscrowOneSide(EscrowDefinition storage escrow, EscrowLeg storage leg, uint256 amount) internal {
+        uint256 activeAmount = _getEscrowAmountRemaining(leg);
 
         //EXCEPTION: AmountExceeded
         require(amount <= activeAmount, "AmountExceeded"); //NOT COVERABLE
@@ -506,33 +506,33 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
             amount = activeAmount;
 
         //calculate fee, and amount to release
-        (address[] memory recipients, uint256[] memory amounts) = _calculatePaymentAmounts(escrow, participant, amount);
+        (address[] memory recipients, uint256[] memory amounts) = _calculatePaymentAmounts(escrow, leg, amount);
 
         //now for each recipient, transfer the amount
         for(uint n=0; n<recipients.length; n++) {
             //transfer the amount to the other party
-            _transferAmount(participant, recipients[n], participant.currency, amounts[n]);
+            _transferAmount(leg, recipients[n], leg.currency, amounts[n]);
         }
 
         //record the amount released
-        participant.amountReleased += amount;
+        leg.amountReleased += amount;
     }
 
-    function _calculatePaymentAmounts(EscrowDefinition storage escrow, EscrowParticipant memory participant, uint256 amount) 
+    function _calculatePaymentAmounts(EscrowDefinition storage escrow, EscrowLeg memory leg, uint256 amount) 
         internal view returns(address[] memory, uint256[] memory) {
         
         address[] memory recipients = new address[](escrow.fees.length + 1);
         uint256[] memory amounts = new uint256[](escrow.fees.length + 1);
         
         //ok first, we shall have the base amount paid to other participant, the counterparty
-        recipients[0] = (participant.participantAddress == escrow.primary.participantAddress) ? 
+        recipients[0] = (leg.participantAddress == escrow.primary.participantAddress) ? 
             escrow.secondary.participantAddress : 
             escrow.primary.participantAddress;
         amounts[0] = amount;
 
         //we're only calculating fees for ERC20 and Native payments
-        if (participant.paymentType == EscrowPaymentType.ERC20 ||
-            participant.paymentType == EscrowPaymentType.Native) {
+        if (leg.paymentType == EscrowPaymentType.ERC20 ||
+            leg.paymentType == EscrowPaymentType.Native) {
 
             //next we must go through each fee and calculate it
             for(uint8 n=0; n<escrow.fees.length; n++) {
@@ -547,7 +547,7 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         return (recipients, amounts);
     }
 
-    function _transferAmount(EscrowParticipant memory from, address to, address tokenAddressOrZero, uint256 amount) internal returns (bool) {
+    function _transferAmount(EscrowLeg memory from, address to, address tokenAddressOrZero, uint256 amount) internal returns (bool) {
         bool success = false;
 
         //TODO: handle NFTs, Bitcoin, and Custom
@@ -581,8 +581,8 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         return success;
     }
 
-    function _getEscrowAmountRemaining(EscrowParticipant memory participant) internal pure returns (uint256) {
-        return participant.amountPaid - participant.amountRefunded - participant.amountReleased;
+    function _getEscrowAmountRemaining(EscrowLeg memory leg) internal pure returns (uint256) {
+        return leg.amountPaid - leg.amountRefunded - leg.amountReleased;
     }
 }
 

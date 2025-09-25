@@ -5,12 +5,12 @@ import "forge-std/Test.sol";
 import {
     PolyEscrow, 
     CreateEscrowInput, 
-    EscrowParticipantInput,
+    EscrowLegInput,
     MAX_RELAY_NODES_PER_ESCROW
 } from "../src/escrow/PolyEscrow.sol";
 import { RelayNode } from "../src/escrow/RelayNode.sol";
 import {
-    EscrowParticipant, 
+    EscrowLeg, 
     FeeDefinition, 
     EscrowPaymentType, 
     ArbitrationDefinition

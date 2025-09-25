@@ -106,31 +106,31 @@ contract RelayNode is Pausable {
             relay();
     }
 
-    function _relay(EscrowDefinition memory escrow, EscrowParticipant memory participant) internal {
-        if (participant.paymentType == EscrowPaymentType.Native) {
-            _relayNative(escrow, participant);
+    function _relay(EscrowDefinition memory escrow, EscrowLeg memory leg) internal {
+        if (leg.paymentType == EscrowPaymentType.Native) {
+            _relayNative(escrow, leg);
         }
-        else if (participant.paymentType == EscrowPaymentType.ERC20) {
-            _relayERC20(escrow, participant);
+        else if (leg.paymentType == EscrowPaymentType.ERC20) {
+            _relayERC20(escrow, leg);
         }
-        else if (participant.paymentType == EscrowPaymentType.ERC721) {
-            _relayERC721(escrow, participant);
+        else if (leg.paymentType == EscrowPaymentType.ERC721) {
+            _relayERC721(escrow, leg);
         }
     }
 
-    function _relayNative(EscrowDefinition memory escrow, EscrowParticipant memory participant) internal {
+    function _relayNative(EscrowDefinition memory escrow, EscrowLeg memory leg) internal {
         uint256 balance = address(this).balance;
         if (balance > 0) {
             escrowContract.placePayment{ value: address(this).balance }(PaymentInput({
                 escrowId: escrow.id,
                 amount: balance,
-                currency: participant.currency
+                currency: leg.currency
             }));
         }
     }
 
-    function _relayERC20(EscrowDefinition memory escrow, EscrowParticipant memory participant) internal {
-        IERC20 token = IERC20(participant.currency);
+    function _relayERC20(EscrowDefinition memory escrow, EscrowLeg memory leg) internal {
+        IERC20 token = IERC20(leg.currency);
         uint256 balance = token.balanceOf(address(this));
 
         if (balance > 0) {
@@ -138,12 +138,12 @@ contract RelayNode is Pausable {
             escrowContract.placePayment(PaymentInput({
                 escrowId: escrow.id,
                 amount: balance,
-                currency: participant.currency
+                currency: leg.currency
             }));
         }
     }
 
-    function _relayERC721(EscrowDefinition memory escrow, EscrowParticipant memory participant) internal {
+    function _relayERC721(EscrowDefinition memory escrow, EscrowLeg memory leg) internal {
         //TODO: implement
     }
 }

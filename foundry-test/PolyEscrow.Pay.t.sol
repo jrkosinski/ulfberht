@@ -5,10 +5,10 @@ import "forge-std/Test.sol";
 import {
     PolyEscrow, 
     CreateEscrowInput, 
-    EscrowParticipantInput 
+    EscrowLegInput 
 } from "../src/escrow/PolyEscrow.sol";
 import {
-    EscrowParticipant, 
+    EscrowLeg, 
     FeeDefinition, 
     EscrowPaymentType, 
     ArbitrationDefinition

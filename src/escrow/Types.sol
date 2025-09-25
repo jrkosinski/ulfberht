@@ -78,8 +78,8 @@ struct EscrowDefinition {
     bytes32 id; 
 
     //counterparties
-    EscrowParticipant primary;
-    EscrowParticipant secondary;
+    EscrowLeg primary;
+    EscrowLeg secondary;
 
     //times
     uint256 timestamp; 
@@ -119,9 +119,9 @@ struct ArbitrationDefinition {
 }
 
 /**
- * EscrowParticipant: defines a participant in an escrow
+ * EscrowLeg: defines a participant side in an escrow
  * ----------------------------------------------------------
- * Each participant has an address, a currency (token address or 0x0 for native), a payment type (native, ERC20, etc.), 
+ * Each leg has an address, a currency (token address or 0x0 for native), a payment type (native, ERC20, etc.), 
  * and amounts pledged, paid, released, and refunded. 
  * amountPledged: how much the party is supposed to pay
  * amountPaid: how much they've paid in already
@@ -129,7 +129,7 @@ struct ArbitrationDefinition {
  * amountRefunded: how much has been refunded back to the payer
  */
 //TODO: change terminology to "side" or "leg"
-struct EscrowParticipant {
+struct EscrowLeg {
     address participantAddress;
     address currency;               //ignored if paymentType not ERC20 or ERC721
     EscrowPaymentType paymentType;

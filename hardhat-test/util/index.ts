@@ -4,7 +4,7 @@ import { BigNumberish } from 'ethers';
 import hre, { ethers } from 'hardhat';
 import { TestToken__factory } from '../../typechain-types';
 
-export interface EscrowParticipant {
+export interface EscrowLeg {
     participantAddress: string;
     currency: string;
     paymentType: number;
@@ -26,8 +26,8 @@ export interface EscrowDefinition {
     id: any;
 
     //counterparties
-    primary: EscrowParticipant;
-    secondary: EscrowParticipant;
+    primary: EscrowLeg;
+    secondary: EscrowLeg;
 
     //times
     timestamp: number;
@@ -51,7 +51,7 @@ export interface ArbitrationDefinition {
     quorum: number; //number of arbiters required to rule
 }
 
-export interface EscrowParticipantInput {
+export interface EscrowLegInput {
     participantAddress: string;
     currency: string; //token address, or 0x0 for native
     paymentType: number; //0 = payer, 1 = receiver
@@ -191,8 +191,8 @@ export class TestUtil {
     public async createEscrow(
         escrowId: string,
         creatorAccount: HardhatEthersSigner,
-        primary: EscrowParticipantInput,
-        secondary: EscrowParticipantInput,
+        primary: EscrowLegInput,
+        secondary: EscrowLegInput,
         startTime: number = 0,
         endTime: number = 0
     ): Promise<EscrowDefinition> {

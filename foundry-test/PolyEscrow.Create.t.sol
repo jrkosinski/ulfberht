@@ -5,10 +5,10 @@ import "forge-std/Test.sol";
 import {
     PolyEscrow, 
     CreateEscrowInput, 
-    EscrowParticipantInput 
+    EscrowLegInput 
 } from "../src/escrow/PolyEscrow.sol";
 import {
-    EscrowParticipant, 
+    EscrowLeg, 
     FeeDefinition, 
     EscrowPaymentType, 
     ArbitrationDefinition 
@@ -31,7 +31,7 @@ contract PolyEscrowCreateTest is PolyEscrowTestBase {
         escrow.createEscrow(input);
     }
 
-    //cannot create an escrow with primary and secondary participants the same  (InvalidPartyAddress)
+    //cannot create an escrow with primary and secondary leg participants the same  (InvalidPartyAddress)
     function testCannotCreateEscrowWithInvalidPartyAddress() public {
         vm.startPrank(payer1);
         CreateEscrowInput memory input = createEscrowInput(

@@ -2,9 +2,9 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
-import {PolyEscrow, CreateEscrowInput, EscrowParticipantInput } from "../src/escrow/PolyEscrow.sol";
+import {PolyEscrow, CreateEscrowInput, EscrowLegInput } from "../src/escrow/PolyEscrow.sol";
 import {
-    EscrowParticipant, 
+    EscrowLeg, 
     FeeDefinition, 
     EscrowPaymentType, 
     ArbitrationDefinition 
@@ -130,7 +130,7 @@ contract PolyEscrowTestBase is Test {
 
         return CreateEscrowInput({
             id: id,
-            primary: EscrowParticipantInput({
+            primary: EscrowLegInput({
                 participantAddress: primaryAddress,
                 currency: primaryCurrency,
                 paymentType: primaryPaymentType,
@@ -138,7 +138,7 @@ contract PolyEscrowTestBase is Test {
             }),
             startTime: 0,
             endTime: 0,
-            secondary: EscrowParticipantInput({
+            secondary: EscrowLegInput({
                 participantAddress: secondaryAddress,
                 currency: secondaryCurrency,
                 paymentType: secondaryPaymentType,
@@ -201,7 +201,7 @@ contract PolyEscrowTestBase is Test {
 
         return CreateEscrowInput({
             id: id,
-            primary: EscrowParticipantInput({
+            primary: EscrowLegInput({
                 participantAddress: primaryAddress,
                 currency: currency1,
                 paymentType: primaryPaymentType,
@@ -209,7 +209,7 @@ contract PolyEscrowTestBase is Test {
             }),
             startTime: startTime,
             endTime: endTime,
-            secondary: EscrowParticipantInput({
+            secondary: EscrowLegInput({
                 participantAddress: secondaryAddress,
                 currency: currency2,
                 paymentType: secondaryPaymentType,
