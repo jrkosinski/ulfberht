@@ -59,9 +59,9 @@ describe('PolyEscrow', function () {
         testNft2 = await TestNftFactory.deploy('XYZ', 'ZYX');
 
         //deploy polyEscrow
-        const AsymPolyEscrowFactory =
+        const PolyEscrowFactory =
             await hre.ethers.getContractFactory('PolyEscrow');
-        polyEscrow = await AsymPolyEscrowFactory.deploy(
+        polyEscrow = await PolyEscrowFactory.deploy(
             securityContext.target,
             systemSettings.target
         );
@@ -308,10 +308,10 @@ describe('PolyEscrow', function () {
                 initialBalances.receiver1.currency1
             );
             expect(balancesAfterFirstPayment.receiver1.currency2).to.equal(
-                initialBalances.receiver1.currency1
+                initialBalances.receiver1.currency2
             );
             expect(balancesAfterFirstPayment.receiver2.currency1).to.equal(
-                initialBalances.receiver1.currency1
+                initialBalances.receiver2.currency1
             );
             expect(balancesAfterFirstPayment.receiver2.currency2).to.equal(
                 initialBalances.receiver1.currency1
@@ -402,13 +402,13 @@ describe('PolyEscrow', function () {
                     paymentType: paymentType2,
                     currency: currency2,
                     amountPledged: amount2,
-                    amountPaid: 0,
+                    amountPaid: amount2,
                     amountReleased: amount2,
                     amountRefunded: 0,
                 },
                 startTime: 0,
                 endTime: 0,
-                status: EscrowStatus.Active,
+                status: EscrowStatus.Completed,
             });
         }
 
@@ -498,10 +498,10 @@ describe('PolyEscrow', function () {
 
             it('pay and fully release a token-to-native escrow', async function () {
                 await testPaymentAndRelease(
-                    PaymentType.Native,
+                    PaymentType.ERC20,
                     testToken1.target,
                     PaymentType.Native,
-                    testToken2.target
+                    ethers.ZeroAddress
                 );
             });
 

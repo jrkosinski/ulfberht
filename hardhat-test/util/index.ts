@@ -227,7 +227,7 @@ export class TestUtil {
         address: any,
         currency: string = ethers.ZeroAddress
     ) {
-        return address === ethers.ZeroAddress
+        return currency === ethers.ZeroAddress
             ? await this.signers[0].provider.getBalance(address)
             : (await hre.ethers.getContractAt('IERC20', currency)).balanceOf(
                   address
@@ -289,23 +289,23 @@ export class TestUtil {
                 expect(escrow.secondary.currency).to.equal(
                     expectedValues.secondary.currency
                 );
-            if (expectedValues.secondary.paymentType)
+            if (expectedValues.secondary.paymentType != undefined)
                 expect(escrow.secondary.paymentType).to.equal(
                     expectedValues.secondary.paymentType
                 );
-            if (expectedValues.secondary.amountPledged)
+            if (expectedValues.secondary.amountPledged != undefined)
                 expect(escrow.secondary.amountPledged).to.equal(
                     expectedValues.secondary.amountPledged
                 );
-            if (expectedValues.secondary.amountPaid)
+            if (expectedValues.secondary.amountPaid != undefined)
                 expect(escrow.secondary.amountPaid).to.equal(
                     expectedValues.secondary.amountPaid
                 );
-            if (expectedValues.secondary.amountReleased)
+            if (expectedValues.secondary.amountReleased != undefined)
                 expect(escrow.secondary.amountReleased).to.equal(
                     expectedValues.secondary.amountReleased
                 );
-            if (expectedValues.secondary.amountRefunded)
+            if (expectedValues.secondary.amountRefunded != undefined)
                 expect(escrow.secondary.amountRefunded).to.equal(
                     expectedValues.secondary.amountRefunded
                 );
