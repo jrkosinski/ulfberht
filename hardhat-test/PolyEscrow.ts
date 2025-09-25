@@ -314,7 +314,7 @@ describe('PolyEscrow', function () {
                 initialBalances.receiver2.currency1
             );
             expect(balancesAfterFirstPayment.receiver2.currency2).to.equal(
-                initialBalances.receiver1.currency1
+                initialBalances.receiver2.currency2
             );
             expect(balancesAfterFirstPayment.escrow.currency1).to.equal(
                 initialBalances.escrow.currency1 + BigInt(amount1)
@@ -367,13 +367,13 @@ describe('PolyEscrow', function () {
                 initialBalances.receiver1.currency1
             );
             expect(balancesAfterSecondPayment.receiver1.currency2).to.equal(
-                initialBalances.receiver1.currency1 + BigInt(amount2)
+                initialBalances.receiver1.currency2 + BigInt(amount2)
             );
             expect(balancesAfterSecondPayment.receiver2.currency1).to.equal(
-                initialBalances.receiver1.currency1 + BigInt(amount1)
+                initialBalances.receiver2.currency1 + BigInt(amount1)
             );
             expect(balancesAfterSecondPayment.receiver2.currency2).to.equal(
-                initialBalances.receiver1.currency1
+                initialBalances.receiver2.currency2
             );
             expect(balancesAfterSecondPayment.escrow.currency1).to.equal(
                 initialBalances.escrow.currency1
