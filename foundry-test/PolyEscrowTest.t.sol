@@ -130,7 +130,7 @@ contract PolyEscrowTestBase is Test {
 
         return CreateEscrowInput({
             id: id,
-            primary: EscrowLegInput({
+            primaryLeg: EscrowLegInput({
                 participantAddress: primaryAddress,
                 currency: primaryCurrency,
                 paymentType: primaryPaymentType,
@@ -138,7 +138,7 @@ contract PolyEscrowTestBase is Test {
             }),
             startTime: 0,
             endTime: 0,
-            secondary: EscrowLegInput({
+            secondaryLeg: EscrowLegInput({
                 participantAddress: secondaryAddress,
                 currency: secondaryCurrency,
                 paymentType: secondaryPaymentType,
@@ -201,7 +201,7 @@ contract PolyEscrowTestBase is Test {
 
         return CreateEscrowInput({
             id: id,
-            primary: EscrowLegInput({
+            primaryLeg: EscrowLegInput({
                 participantAddress: primaryAddress,
                 currency: currency1,
                 paymentType: primaryPaymentType,
@@ -209,7 +209,7 @@ contract PolyEscrowTestBase is Test {
             }),
             startTime: startTime,
             endTime: endTime,
-            secondary: EscrowLegInput({
+            secondaryLeg: EscrowLegInput({
                 participantAddress: secondaryAddress,
                 currency: currency2,
                 paymentType: secondaryPaymentType,

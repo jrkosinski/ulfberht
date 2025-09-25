@@ -56,8 +56,8 @@ contract RelayNode is Pausable {
         EscrowDefinition memory escrow = escrowContract.getEscrow(escrowId);
 
         if (escrow.status == EscrowStatus.Pending || escrow.status == EscrowStatus.Active) {
-            _relay(escrow, escrow.primary);
-            _relay(escrow, escrow.secondary);
+            _relay(escrow, escrow.primaryLeg);
+            _relay(escrow, escrow.secondaryLeg);
 
         } else if (escrow.status == EscrowStatus.Completed) {
             //TODO: Logic for completed escrow: refund
@@ -78,7 +78,7 @@ contract RelayNode is Pausable {
     //TODO: (TMED) test this whole function
     function refundAll(address currency) public whenNotPaused {
         EscrowDefinition memory escrow = escrowContract.getEscrow(escrowId);
-        address payer = escrow.primary.participantAddress;
+        address payer = escrow.primaryLeg.participantAddress;
 
         if (currency == address(0)) {
             uint256 balance = address(this).balance;

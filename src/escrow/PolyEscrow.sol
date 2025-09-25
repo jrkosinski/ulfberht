@@ -20,8 +20,8 @@ uint8 constant MAX_RELAY_NODES_PER_ESCROW = 10; // Max number of relay nodes all
 
 struct CreateEscrowInput {
     bytes32 id;                         //Unique identifier for the escrow
-    EscrowLegInput primary;     //Details of the first party
-    EscrowLegInput secondary;   //Details of the second party
+    EscrowLegInput primaryLeg;          //Details of the first party
+    EscrowLegInput secondaryLeg;        //Details of the second party
     uint256 startTime;                  //Optional start time for the escrow (0 if none)
     uint256 endTime;                    //Optional end time for the escrow (0 if none)
     ArbitrationDefinition arbitration;  //Arbitration details
@@ -132,26 +132,26 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         require(input.id != 0, "InvalidEscrow");
 
         //EXCEPTION: InvalidPartyAddress
-        require(input.primary.participantAddress != address(0), "InvalidPartyAddress");
-        require(input.secondary.participantAddress != address(0), "InvalidPartyAddress");
+        require(input.primaryLeg.participantAddress != address(0), "InvalidPartyAddress");
+        require(input.secondaryLeg.participantAddress != address(0), "InvalidPartyAddress");
 
         //EXCEPTION: InvalidPartyAddress: (receiver cannot be the same as payer)
-        require(input.primary.participantAddress != input.secondary.participantAddress, "InvalidPartyAddress");
+        require(input.primaryLeg.participantAddress != input.secondaryLeg.participantAddress, "InvalidPartyAddress");
 
         //EXCEPTION: InvalidAmount
-        require(input.primary.amount > 0, "InvalidAmount");
-        require(input.secondary.amount > 0, "InvalidAmount");
+        require(input.primaryLeg.amount > 0, "InvalidAmount");
+        require(input.secondaryLeg.amount > 0, "InvalidAmount");
 
         //EXCEPTION: InvalidToken
-        if (input.primary.paymentType == EscrowPaymentType.ERC20) {
-            require(IsErc20.check(input.primary.currency), "InvalidToken");
+        if (input.primaryLeg.paymentType == EscrowPaymentType.ERC20) {
+            require(IsErc20.check(input.primaryLeg.currency), "InvalidToken");
         }
-        if (input.secondary.paymentType == EscrowPaymentType.ERC20) {
-            require(IsErc20.check(input.secondary.currency), "InvalidToken");
+        if (input.secondaryLeg.paymentType == EscrowPaymentType.ERC20) {
+            require(IsErc20.check(input.secondaryLeg.currency), "InvalidToken");
         }
 
         //EXCEPTION: CurrencyMismatch
-        require (input.primary.currency != input.secondary.currency, "CurrencyMismatch");
+        require (input.primaryLeg.currency != input.secondaryLeg.currency, "CurrencyMismatch");
 
         //EXCEPTION: InvalidEndDate
         if (input.endTime > 0) {
@@ -171,22 +171,22 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         escrow.id = input.id;
 
         //add primary participant
-        escrow.primary = EscrowLeg({
-            participantAddress: input.primary.participantAddress,
-            currency: input.primary.currency,
-            paymentType: input.primary.paymentType,
-            amountPledged: input.primary.amount,
+        escrow.primaryLeg = EscrowLeg({
+            participantAddress: input.primaryLeg.participantAddress,
+            currency: input.primaryLeg.currency,
+            paymentType: input.primaryLeg.paymentType,
+            amountPledged: input.primaryLeg.amount,
             amountPaid: 0,
             amountReleased: 0,
             amountRefunded: 0
         });
 
         //add secondary participant
-        escrow.secondary = EscrowLeg({
-            participantAddress: input.secondary.participantAddress,
-            currency: input.secondary.currency,
-            paymentType: input.secondary.paymentType,
-            amountPledged: input.secondary.amount,
+        escrow.secondaryLeg = EscrowLeg({
+            participantAddress: input.secondaryLeg.participantAddress,
+            currency: input.secondaryLeg.currency,
+            paymentType: input.secondaryLeg.paymentType,
+            amountPledged: input.secondaryLeg.amount,
             amountPaid: 0,
             amountReleased: 0,
             amountRefunded: 0
@@ -263,30 +263,30 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         EscrowLeg memory payer;
 
         //figure out by the currency, which participant is paying
-        if (escrow.primary.paymentType == EscrowPaymentType.Native) {
+        if (escrow.primaryLeg.paymentType == EscrowPaymentType.Native) {
             if (paymentInput.currency == address(0)) {
                 //got it 
-                payer = escrow.primary;
+                payer = escrow.primaryLeg;
             }
         }
-        if (escrow.primary.paymentType == EscrowPaymentType.ERC20 || 
-            escrow.primary.paymentType == EscrowPaymentType.ERC721) {
-            if (paymentInput.currency == escrow.primary.currency) {
+        if (escrow.primaryLeg.paymentType == EscrowPaymentType.ERC20 || 
+            escrow.primaryLeg.paymentType == EscrowPaymentType.ERC721) {
+            if (paymentInput.currency == escrow.primaryLeg.currency) {
                 //got it 
-                payer = escrow.primary;
+                payer = escrow.primaryLeg;
             }
         }
-        if (escrow.secondary.paymentType == EscrowPaymentType.Native) {
+        if (escrow.secondaryLeg.paymentType == EscrowPaymentType.Native) {
             if (paymentInput.currency == address(0)) {
                 //got it 
-                payer = escrow.secondary;
+                payer = escrow.secondaryLeg;
             }
         }
-        if (escrow.secondary.paymentType == EscrowPaymentType.ERC20 || 
-            escrow.secondary.paymentType == EscrowPaymentType.ERC721) {
-            if (paymentInput.currency == escrow.secondary.currency) {
+        if (escrow.secondaryLeg.paymentType == EscrowPaymentType.ERC20 || 
+            escrow.secondaryLeg.paymentType == EscrowPaymentType.ERC721) {
+            if (paymentInput.currency == escrow.secondaryLeg.currency) {
                 //got it 
-                payer = escrow.secondary;
+                payer = escrow.secondaryLeg;
             }
         }
 
@@ -322,14 +322,14 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
 
         //increment the amount paid for the leg
         EscrowLeg storage leg = 
-            (payer.participantAddress == escrow.primary.participantAddress) ? 
-                escrow.primary : 
-                escrow.secondary;
+            (payer.participantAddress == escrow.primaryLeg.participantAddress) ? 
+                escrow.primaryLeg : 
+                escrow.secondaryLeg;
         leg.amountPaid += paymentInput.amount;
 
         //if escrow now fully paid, release it 
-        if (escrow.primary.amountPaid >= escrow.primary.amountPledged &&
-            escrow.secondary.amountPaid >= escrow.secondary.amountPledged) {
+        if (escrow.primaryLeg.amountPaid >= escrow.primaryLeg.amountPledged &&
+            escrow.secondaryLeg.amountPaid >= escrow.secondaryLeg.amountPledged) {
             _releaseEscrow(paymentInput.escrowId);
         }
 
@@ -491,8 +491,8 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         EscrowDefinition storage escrow = escrows[escrowId]; 
 
         //release for both sides
-        _releaseEscrowOneSide(escrow, escrow.primary, 0);
-        _releaseEscrowOneSide(escrow, escrow.secondary, 0);
+        _releaseEscrowOneSide(escrow, escrow.primaryLeg, 0);
+        _releaseEscrowOneSide(escrow, escrow.secondaryLeg, 0);
 
         escrow.status = EscrowStatus.Completed;
     }
@@ -525,9 +525,9 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         uint256[] memory amounts = new uint256[](escrow.fees.length + 1);
         
         //ok first, we shall have the base amount paid to other participant, the counterparty
-        recipients[0] = (leg.participantAddress == escrow.primary.participantAddress) ? 
-            escrow.secondary.participantAddress : 
-            escrow.primary.participantAddress;
+        recipients[0] = (leg.participantAddress == escrow.primaryLeg.participantAddress) ? 
+            escrow.secondaryLeg.participantAddress : 
+            escrow.primaryLeg.participantAddress;
         amounts[0] = amount;
 
         //we're only calculating fees for ERC20 and Native payments

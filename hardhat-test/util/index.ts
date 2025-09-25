@@ -26,8 +26,8 @@ export interface EscrowDefinition {
     id: any;
 
     //counterparties
-    primary: EscrowLeg;
-    secondary: EscrowLeg;
+    primaryLeg: EscrowLeg;
+    secondaryLeg: EscrowLeg;
 
     //times
     timestamp: number;
@@ -61,7 +61,7 @@ export interface EscrowLegInput {
 export function convertEscrow(rawData: any[]): EscrowDefinition {
     const output: EscrowDefinition = {
         id: rawData[0],
-        primary: {
+        primaryLeg: {
             participantAddress: rawData[1][0],
             currency: rawData[1][1],
             paymentType: rawData[1][2],
@@ -70,7 +70,7 @@ export function convertEscrow(rawData: any[]): EscrowDefinition {
             amountReleased: Number(rawData[1][5]),
             amountRefunded: Number(rawData[1][6]),
         },
-        secondary: {
+        secondaryLeg: {
             participantAddress: rawData[2][0],
             currency: rawData[2][1],
             paymentType: rawData[2][2],
@@ -191,15 +191,15 @@ export class TestUtil {
     public async createEscrow(
         escrowId: string,
         creatorAccount: HardhatEthersSigner,
-        primary: EscrowLegInput,
-        secondary: EscrowLegInput,
+        primaryLeg: EscrowLegInput,
+        secondaryLeg: EscrowLegInput,
         startTime: number = 0,
         endTime: number = 0
     ): Promise<EscrowDefinition> {
         await this.polyEscrow.connect(creatorAccount).createEscrow({
             id: escrowId,
-            primary,
-            secondary,
+            primaryLeg,
+            secondaryLeg,
             startTime,
             endTime,
             arbitration: {
@@ -249,65 +249,65 @@ export class TestUtil {
             return true;
         };
 
-        if (expectedValues.primary) {
-            if (expectedValues.primary.participantAddress)
-                expect(escrow.primary.participantAddress).to.equal(
-                    expectedValues.primary.participantAddress
+        if (expectedValues.primaryLeg) {
+            if (expectedValues.primaryLeg.participantAddress)
+                expect(escrow.primaryLeg.participantAddress).to.equal(
+                    expectedValues.primaryLeg.participantAddress
                 );
-            if (expectedValues.primary.currency)
-                expect(escrow.primary.currency).to.equal(
-                    expectedValues.primary.currency
+            if (expectedValues.primaryLeg.currency)
+                expect(escrow.primaryLeg.currency).to.equal(
+                    expectedValues.primaryLeg.currency
                 );
-            if (expectedValues.primary.paymentType)
-                expect(escrow.primary.paymentType).to.equal(
-                    expectedValues.primary.paymentType
+            if (expectedValues.primaryLeg.paymentType)
+                expect(escrow.primaryLeg.paymentType).to.equal(
+                    expectedValues.primaryLeg.paymentType
                 );
-            if (expectedValues.primary.amountPledged)
-                expect(escrow.primary.amountPledged).to.equal(
-                    expectedValues.primary.amountPledged
+            if (expectedValues.primaryLeg.amountPledged)
+                expect(escrow.primaryLeg.amountPledged).to.equal(
+                    expectedValues.primaryLeg.amountPledged
                 );
-            if (expectedValues.primary.amountPaid)
-                expect(escrow.primary.amountPaid).to.equal(
-                    expectedValues.primary.amountPaid
+            if (expectedValues.primaryLeg.amountPaid)
+                expect(escrow.primaryLeg.amountPaid).to.equal(
+                    expectedValues.primaryLeg.amountPaid
                 );
-            if (expectedValues.primary.amountReleased)
-                expect(escrow.primary.amountReleased).to.equal(
-                    expectedValues.primary.amountReleased
+            if (expectedValues.primaryLeg.amountReleased)
+                expect(escrow.primaryLeg.amountReleased).to.equal(
+                    expectedValues.primaryLeg.amountReleased
                 );
-            if (expectedValues.primary.amountRefunded)
-                expect(escrow.primary.amountRefunded).to.equal(
-                    expectedValues.primary.amountRefunded
+            if (expectedValues.primaryLeg.amountRefunded)
+                expect(escrow.primaryLeg.amountRefunded).to.equal(
+                    expectedValues.primaryLeg.amountRefunded
                 );
         }
 
         if (expectedValues.secondary) {
-            if (expectedValues.secondary.participantAddress)
-                expect(escrow.secondary.participantAddress).to.equal(
-                    expectedValues.secondary.participantAddress
+            if (expectedValues.seconaryLeg.participantAddress)
+                expect(escrow.secondaryLeg.participantAddress).to.equal(
+                    expectedValues.seconaryLeg.participantAddress
                 );
-            if (expectedValues.secondary.currency)
-                expect(escrow.secondary.currency).to.equal(
-                    expectedValues.secondary.currency
+            if (expectedValues.seconaryLeg.currency)
+                expect(escrow.secondaryLeg.currency).to.equal(
+                    expectedValues.seconaryLeg.currency
                 );
-            if (expectedValues.secondary.paymentType != undefined)
-                expect(escrow.secondary.paymentType).to.equal(
-                    expectedValues.secondary.paymentType
+            if (expectedValues.seconaryLeg.paymentType != undefined)
+                expect(escrow.secondaryLeg.paymentType).to.equal(
+                    expectedValues.seconaryLeg.paymentType
                 );
-            if (expectedValues.secondary.amountPledged != undefined)
-                expect(escrow.secondary.amountPledged).to.equal(
-                    expectedValues.secondary.amountPledged
+            if (expectedValues.seconaryLeg.amountPledged != undefined)
+                expect(escrow.secondaryLeg.amountPledged).to.equal(
+                    expectedValues.seconaryLeg.amountPledged
                 );
-            if (expectedValues.secondary.amountPaid != undefined)
-                expect(escrow.secondary.amountPaid).to.equal(
-                    expectedValues.secondary.amountPaid
+            if (expectedValues.seconaryLeg.amountPaid != undefined)
+                expect(escrow.secondaryLeg.amountPaid).to.equal(
+                    expectedValues.seconaryLeg.amountPaid
                 );
-            if (expectedValues.secondary.amountReleased != undefined)
-                expect(escrow.secondary.amountReleased).to.equal(
-                    expectedValues.secondary.amountReleased
+            if (expectedValues.seconaryLeg.amountReleased != undefined)
+                expect(escrow.secondaryLeg.amountReleased).to.equal(
+                    expectedValues.seconaryLeg.amountReleased
                 );
-            if (expectedValues.secondary.amountRefunded != undefined)
-                expect(escrow.secondary.amountRefunded).to.equal(
-                    expectedValues.secondary.amountRefunded
+            if (expectedValues.seconaryLeg.amountRefunded != undefined)
+                expect(escrow.secondaryLeg.amountRefunded).to.equal(
+                    expectedValues.seconaryLeg.amountRefunded
                 );
         }
 

@@ -78,8 +78,8 @@ struct EscrowDefinition {
     bytes32 id; 
 
     //counterparties
-    EscrowLeg primary;
-    EscrowLeg secondary;
+    EscrowLeg primaryLeg;
+    EscrowLeg secondaryLeg;
 
     //times
     uint256 timestamp; 

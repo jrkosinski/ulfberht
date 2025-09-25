@@ -173,7 +173,7 @@ describe('RelayNode', function () {
 
                 //verify escrow
                 await getAndVerifyEscrow(escrowId, {
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -182,7 +182,7 @@ describe('RelayNode', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -234,7 +234,7 @@ describe('RelayNode', function () {
 
                 //verify escrow
                 await getAndVerifyEscrow(escrowId, {
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -243,7 +243,7 @@ describe('RelayNode', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -282,7 +282,7 @@ describe('RelayNode', function () {
 
                 //verify escrow
                 await getAndVerifyEscrow(escrowId, {
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -291,7 +291,7 @@ describe('RelayNode', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -355,7 +355,7 @@ describe('RelayNode', function () {
 
                 //verify escrow
                 await getAndVerifyEscrow(escrowId, {
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -364,7 +364,7 @@ describe('RelayNode', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -400,7 +400,7 @@ describe('RelayNode', function () {
 
                 //verify escrow
                 await getAndVerifyEscrow(escrowId, {
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -409,7 +409,7 @@ describe('RelayNode', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -461,7 +461,7 @@ describe('RelayNode', function () {
 
                 //verify escrow
                 await getAndVerifyEscrow(escrowId, {
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -470,7 +470,7 @@ describe('RelayNode', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -510,7 +510,7 @@ describe('RelayNode', function () {
 
                 //verify escrow
                 await getAndVerifyEscrow(escrowId, {
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -519,7 +519,7 @@ describe('RelayNode', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -580,7 +580,7 @@ describe('RelayNode', function () {
 
                 //verify escrow
                 await getAndVerifyEscrow(escrowId, {
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -589,7 +589,7 @@ describe('RelayNode', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -686,7 +686,7 @@ describe('RelayNode', function () {
 
                 //verify escrow
                 await getAndVerifyEscrow(escrowId, {
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -695,7 +695,7 @@ describe('RelayNode', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -755,7 +755,7 @@ describe('RelayNode', function () {
 
                 //verify escrow
                 await getAndVerifyEscrow(escrowId, {
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -764,7 +764,7 @@ describe('RelayNode', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -801,7 +801,7 @@ describe('RelayNode', function () {
 
                 //verify escrow
                 await getAndVerifyEscrow(escrowId, {
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -810,7 +810,7 @@ describe('RelayNode', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -860,7 +860,7 @@ describe('RelayNode', function () {
 
                 //verify escrow
                 await getAndVerifyEscrow(escrowId, {
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -869,7 +869,7 @@ describe('RelayNode', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -906,7 +906,7 @@ describe('RelayNode', function () {
 
                 //verify escrow
                 await getAndVerifyEscrow(escrowId, {
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -915,7 +915,7 @@ describe('RelayNode', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -976,7 +976,7 @@ describe('RelayNode', function () {
 
                 //verify escrow
                 await getAndVerifyEscrow(escrowId, {
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -985,7 +985,7 @@ describe('RelayNode', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -1013,7 +1013,7 @@ describe('RelayNode', function () {
 
                 //verify escrow
                 await getAndVerifyEscrow(escrowId, {
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -1022,7 +1022,7 @@ describe('RelayNode', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,

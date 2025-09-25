@@ -134,7 +134,7 @@ describe('PolyEscrow', function () {
                 //verify escrow properties
                 testUtil.verifyEscrow(escrow, {
                     id: escrowId,
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -143,7 +143,7 @@ describe('PolyEscrow', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -171,13 +171,13 @@ describe('PolyEscrow', function () {
                 await expect(
                     polyEscrow.connect(testUtil.receivers[0]).createEscrow({
                         id: escrowId,
-                        primary: {
+                        primaryLeg: {
                             participantAddress: testUtil.receivers[0].address,
                             paymentType: PaymentType.ERC20,
                             currency: testToken1.target,
                             amount: amount1,
                         },
-                        secondary: {
+                        secondaryLeg: {
                             participantAddress: testUtil.receivers[1].address,
                             paymentType: PaymentType.Native,
                             currency: ethers.ZeroAddress,
@@ -329,7 +329,7 @@ describe('PolyEscrow', function () {
             //verify escrow properties
             testUtil.verifyEscrow(escrow, {
                 id: escrowId,
-                primary: {
+                primaryLeg: {
                     participantAddress: testUtil.receivers[0].address,
                     paymentType: paymentType1,
                     currency: currency1,
@@ -338,7 +338,7 @@ describe('PolyEscrow', function () {
                     amountReleased: 0,
                     amountRefunded: 0,
                 },
-                secondary: {
+                secondaryLeg: {
                     participantAddress: testUtil.receivers[1].address,
                     paymentType: paymentType2,
                     currency: currency2,
@@ -388,7 +388,7 @@ describe('PolyEscrow', function () {
             //verify escrow properties
             testUtil.verifyEscrow(escrow, {
                 id: escrowId,
-                primary: {
+                primaryLeg: {
                     participantAddress: testUtil.receivers[0].address,
                     paymentType: paymentType1,
                     currency: currency1,
@@ -397,7 +397,7 @@ describe('PolyEscrow', function () {
                     amountReleased: amount1,
                     amountRefunded: 0,
                 },
-                secondary: {
+                secondaryLeg: {
                     participantAddress: testUtil.receivers[1].address,
                     paymentType: paymentType2,
                     currency: currency2,
@@ -430,7 +430,7 @@ describe('PolyEscrow', function () {
                 //verify escrow properties
                 testUtil.verifyEscrow(escrow, {
                     id: escrowId,
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -439,7 +439,7 @@ describe('PolyEscrow', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
@@ -472,7 +472,7 @@ describe('PolyEscrow', function () {
                 //verify escrow properties
                 testUtil.verifyEscrow(escrow, {
                     id: escrowId,
-                    primary: {
+                    primaryLeg: {
                         participantAddress: testUtil.receivers[0].address,
                         paymentType: PaymentType.ERC20,
                         currency: testToken1.target,
@@ -481,7 +481,7 @@ describe('PolyEscrow', function () {
                         amountReleased: 0,
                         amountRefunded: 0,
                     },
-                    secondary: {
+                    secondaryLeg: {
                         participantAddress: testUtil.receivers[1].address,
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
