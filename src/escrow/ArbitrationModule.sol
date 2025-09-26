@@ -90,8 +90,7 @@ contract ArbitrationModule is IArbitrationModule
     /**
      * @inheritdoc IArbitrationModule
      */
-    function getActiveProposal(bytes32 escrowId) external view returns (ArbitrationProposal memory)
-    {
+    function getActiveProposal(bytes32 escrowId) external view returns (ArbitrationProposal memory) {
         for(uint32 n=0; n<escrowProposalIds[escrowId].length; n++) {
 
             ArbitrationProposal memory prop = proposals[escrowProposalIds[escrowId][n]];
@@ -128,6 +127,70 @@ contract ArbitrationModule is IArbitrationModule
      * @param input Properties of proposal. 
      */
     function proposeArbitration(ArbitrationProposalInput calldata input) external virtual {
+        //get the relevant escrow
+        //EXCEPTION: InvalidEscrow
+        //EXCEPTION: InvalidArbitrationModule
+        EscrowDefinition memory escrow = _getAndCheckEscrow(IPolyEscrow(input.escrowAddress), input.escrowId);
+
+        //EXCEPTION: Unauthorized
+        require(_canProposeArbitration(IPolyEscrow(input.escrowAddress), input.escrowId, msg.sender), "Unauthorized");
+
+        //EXCEPTION: InvalidEscrowState
+        require(_escrowStateIsValid(IPolyEscrow(input.escrowAddress), input.escrowId), "InvalidEscrowState");
+
+        //EXCEPTION: MaxArbitrationCasesReached
+        //Check if maximum number of active arbitration cases has been reached
+        require(escrowProposalIds[input.escrowId].length < MAX_ARBITRATION_CASES, "MaxArbitrationCases"); //NOT COVERED
+
+        //EXCEPTION: MaxActiveArbitrationCasesReached
+        require(_countActiveProposals(input.escrowId) <= 0, "MaxActiveArbitrationCases"); //NOT REACHABLE
+
+        //TODO: at least one action must be specified 
+
+        //EXCEPTION: InvalidProposalAmount
+        //Validate the arbitration amount
+        if (input.primaryLegAction != ArbitrationAction.None) {
+            uint256 amountRemaining = _getEscrowLegAmountRemaining(escrow.primaryLeg);
+            if (input.primaryLegAmount > amountRemaining) {
+                //input.primaryLegAmount = amountRemaining;
+            }
+        }
+        if (input.secondaryLegAction != ArbitrationAction.None) {
+            uint256 amountRemaining = _getEscrowLegAmountRemaining(escrow.secondaryLeg);
+            if (input.secondaryLegAmount > amountRemaining) {
+                //input.secondaryLegAmount = amountRemaining;
+            }
+        }
+        
+        //generate a unique id
+        bytes32 propId = _generateUniqueProposalId(IPolyEscrow(input.escrowAddress), input.escrowId);
+        proposals[propId].id = propId;
+        proposals[propId].escrowId = input.escrowId;
+        proposals[propId].escrowAddress = input.escrowAddress;
+        proposals[propId].primaryLegAction = input.primaryLegAction;
+        proposals[propId].secondaryLegAction = input.secondaryLegAction;
+        proposals[propId].primaryLegAmount = input.primaryLegAmount;
+        proposals[propId].secondaryLegAmount = input.secondaryLegAmount;
+        proposals[propId].status = ArbitrationStatus.Active;
+        proposals[propId].votesFor = 0;
+        proposals[propId].votesAgainst = 0;
+        proposals[propId].autoExecute = input.autoExecute;
+        proposals[propId].proposer = msg.sender;
+        proposals[propId].escrowAddress = address(input.escrowAddress);
+
+        //add to array for iteration
+        escrowProposalIds[input.escrowId].push(propId);
+
+        //record proposer as an automatic yes vote, if proposer is a voter
+        if (_canVoteProposal(IPolyEscrow(input.escrowAddress), input.escrowId, msg.sender)) {
+            _voteProposal(IPolyEscrow(input.escrowAddress), escrow, proposals[propId], true);
+        }
+
+        //set the escrow into Arbitration state 
+        IPolyEscrow(input.escrowAddress).setArbitration(input.escrowId, true);
+
+        //raise event 
+        emit ArbitrationProposed(proposals[propId].id, proposals[propId].escrowId, msg.sender);
     }
 
     /**
@@ -150,6 +213,32 @@ contract ArbitrationModule is IArbitrationModule
      */
     function voteProposal(bytes32 proposalId, bool vote) external virtual {
         
+        // WHO can vote on arbitration?  arbiters only
+
+        //get the arbitration proposal
+        //EXCEPTION: InvalidProposal
+        ArbitrationProposal storage proposal = proposals[proposalId];
+        require(proposal.id != bytes32(0), "InvalidProposal");
+
+        //get the escrow id
+        bytes32 escrowId = proposal.escrowId;
+        IPolyEscrow polyEscrow = IPolyEscrow(proposal.escrowAddress);
+
+       //get the relevant escrow
+        //EXCEPTION: InvalidEscrow
+        //EXCEPTION: InvalidArbitrationModule
+        EscrowDefinition memory escrow = _getAndCheckEscrow(polyEscrow, escrowId);
+
+        //validate rights of voter
+        //EXCEPTION: Unauthorized
+        require(_canVoteProposal(polyEscrow, escrowId, msg.sender), "Unauthorized");
+
+        //verify that the proposal is in a state in which it can be voted
+        //EXCEPTION: InvalidProposalState
+        require(proposal.status == ArbitrationStatus.Active, "InvalidProposalState"); //NOT COVERED
+
+        //record vote 
+        _voteProposal(polyEscrow, escrow, proposal, vote);
     }
 
     /**
@@ -167,6 +256,32 @@ contract ArbitrationModule is IArbitrationModule
      * @param proposalId The unique proposal id to cancel
      */
     function cancelProposal(bytes32 proposalId) external virtual {
+        //get the arbitration proposal
+        //EXCEPTION: InvalidProposal 
+        ArbitrationProposal storage proposal = proposals[proposalId];
+        require(proposal.id != bytes32(0), "InvalidProposal");
+
+        //only the proposer can cancel 
+        //EXCEPTION: Unauthorized 
+        require(proposal.proposer == msg.sender, "Unauthorized");
+
+        IPolyEscrow polyEscrow = IPolyEscrow(proposal.escrowAddress);
+
+        //can only cancel if no votes have been cast
+        //EXCEPTION: NotCancellable
+        require(proposal.votesFor == 0 && proposal.votesAgainst == 0, "NotCancellable");
+        
+        //EXCEPTION: InvalidProposalState
+        require(proposal.status == ArbitrationStatus.Active, "InvalidProposalState");
+
+        //set proposal to cancelled
+        proposal.status = ArbitrationStatus.Canceled;
+
+        //unset arbitration
+        polyEscrow.setArbitration(proposal.escrowId, false);
+
+        //emit event
+        emit ProposalCancelled(proposal.id, proposal.escrowId, msg.sender);
     }
 
     /**
@@ -185,7 +300,47 @@ contract ArbitrationModule is IArbitrationModule
      * @param proposalId The unique proposal id to execute
      */
     function executeProposal(bytes32 proposalId) external virtual {
-        
+        //get the arbitration proposal
+        //EXCEPTION: InvalidProposal 
+        ArbitrationProposal storage proposal = proposals[proposalId];
+        require(proposal.id != bytes32(0), "InvalidProposal");
+
+        //proposal must be accepted 
+        //EXCEPTION: InvalidProposalState 
+        require(proposal.status == ArbitrationStatus.Accepted, "InvalidProposalState");
+
+        IPolyEscrow polyEscrow = IPolyEscrow(proposal.escrowAddress);
+
+        //re-validate the amount (adjust it if necessary)
+        //TODO: maybe make a function for this 
+        EscrowDefinition memory escrow = polyEscrow.getEscrow(proposal.escrowId);
+        if (proposal.primaryLegAction != ArbitrationAction.None) {
+            uint256 amountRemaining = _getEscrowLegAmountRemaining(escrow.primaryLeg);
+            if (proposal.primaryLegAmount > amountRemaining) {
+                //TODO: test this 
+                proposal.primaryLegAmount = amountRemaining;
+            }
+        }
+        if (proposal.secondaryLegAction != ArbitrationAction.None) {
+            uint256 amountRemaining = _getEscrowLegAmountRemaining(escrow.secondaryLeg);
+            if (proposal.secondaryLegAmount > amountRemaining) {
+                //TODO: test this 
+                proposal.secondaryLegAmount = amountRemaining;
+            }
+        }
+
+        //get the escrow id
+        bytes32 escrowId = proposal.escrowId;
+
+       //get the relevant escrow
+        //EXCEPTION: InvalidEscrow
+        //EXCEPTION: InvalidArbitrationModule
+        _getAndCheckEscrow(polyEscrow, escrowId);
+
+        //TODO: (HIGH) ensure that escrow is in correct state to have arbitration executed (what states would those be?)
+
+        //execute 
+        _executeProposal(polyEscrow, proposal);
     }
 
     /**
@@ -236,7 +391,55 @@ contract ArbitrationModule is IArbitrationModule
     }
 
     function _voteProposal(IPolyEscrow polyEscrow, EscrowDefinition memory escrow, ArbitrationProposal storage proposal, bool vote) internal {
-        
+        //TODO: (TLOW) test that voters can't vote more than once even if their vote was automatic
+
+        //record vote 
+        if (proposalVotes[proposal.id][msg.sender] == ArbitrationVote.None) {
+            //this voter has not yet voted on this proposal
+            if (vote) {
+                proposal.votesFor += 1;
+                proposalVotes[proposal.id][msg.sender] = ArbitrationVote.Yea;
+            } else {
+                proposal.votesAgainst += 1;
+                proposalVotes[proposal.id][msg.sender] = ArbitrationVote.Nay;
+            }
+        }
+        else {
+            //this voter has voted before, may be changing vote 
+            if (vote && proposalVotes[proposal.id][msg.sender] == ArbitrationVote.Nay) {
+                //change vote from nay to yea
+                proposal.votesFor += 1;
+                proposal.votesAgainst -= 1;
+                proposalVotes[proposal.id][msg.sender] = ArbitrationVote.Yea;
+            } 
+            else if (!vote && proposalVotes[proposal.id][msg.sender] == ArbitrationVote.Yea) {
+                //change vote from yea to nay
+                proposal.votesFor -= 1;
+                proposal.votesAgainst += 1;
+                proposalVotes[proposal.id][msg.sender] = ArbitrationVote.Nay;
+            }
+        }
+
+        //change the status; are there enough votes to execute?
+        uint256 arbiterCount = escrow.arbitration.arbiters.length;
+        uint8 quorum = escrow.arbitration.quorum;
+        if (proposal.votesFor >= quorum) {
+            proposal.status = ArbitrationStatus.Accepted;
+            
+            // Auto-execute if autoExecute flag is true
+            if (proposal.autoExecute) {
+                _executeProposal(polyEscrow, proposal);
+            }
+        }
+        else if (proposal.votesAgainst > (arbiterCount - quorum)) {
+            proposal.status = ArbitrationStatus.Rejected;
+
+            //unset arbitration mode
+            polyEscrow.setArbitration(proposal.escrowId, false);
+        }
+
+        //raise event 
+        emit ProposalVoted(proposal.id, proposal.escrowId, msg.sender); //NOT COVERED
     }
 
     function _getAndCheckEscrow(IPolyEscrow polyEscrow, bytes32 escrowId) internal view returns (EscrowDefinition memory) {
@@ -258,8 +461,8 @@ contract ArbitrationModule is IArbitrationModule
         return escrow;
     }
 
-    function _getEscrowAmountRemaining(EscrowDefinition memory escrow) internal pure returns (uint256) {
-        return escrow.primaryLeg.amountPaid - escrow.primaryLeg.amountRefunded - escrow.primaryLeg.amountReleased;
+    function _getEscrowLegAmountRemaining(EscrowLeg memory leg) internal pure returns (uint256) {
+        return leg.amountPaid - leg.amountRefunded - leg.amountReleased;
     }
 
     function _countActiveProposals(bytes32 escrowId) internal view returns (uint8) {

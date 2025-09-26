@@ -167,4 +167,12 @@ If funds have been transferred into the relay node contract, but before they hav
 
 ### Proposal Lifecycle
 
+- Proposed (Active)
+- Voting (Active)
+- Voted (Rejected or Accepted)
+- Executed (Executed, terminal)
+- Canceled (terminal)
+
+A proposal is active upon creation. While active, voting can take place. At this point, it can be canceled, which is terminal. When a quorum is reached, the proposal is either Rejected or Accepted (Rejected is terminal). If Accepted, a proposal can be either Canceled (terminal) or Executed (also terminal).
+
 ## Lifecycle of an Escrow
