@@ -66,35 +66,33 @@ contract RelayNode is Pausable {
         }
     }
 
-    /**
-     * @dev Refunds all (of a certain currency) in this contract, to the escrow payer. 
-     * 
-     * Reverts: 
-     * - ZeroBalance
-     * - RefundFailed
-     * 
-     * @param currency Address of the currency to refund; 0x0 for native.
-     */
-    //TODO: (TMED) test this whole function
-    function refundAll(address currency) public whenNotPaused {
+    //TODO: this should be re-structured so that it keeps a record of who has paid in,
+    // and refunds to the original payer no more than the amount that they paid (according to currency)
+    function refundAll() public whenNotPaused {
         EscrowDefinition memory escrow = escrowContract.getEscrow(escrowId);
-        address payer = escrow.primaryLeg.participantAddress;
+        refundLeg(escrow.primaryLeg.currency);
+        refundLeg(escrow.secondaryLeg.currency);
+    }
 
+    function refundLeg(address currency) public whenNotPaused {
+        EscrowDefinition memory escrow = escrowContract.getEscrow(escrowId);
+
+        //refund native 
         if (currency == address(0)) {
-            uint256 balance = address(this).balance;
-            require(balance > 0, "ZeroBalance");
-
-            //native refund
-            (bool success, ) = payable(payer).call{value: balance}("");
-
-            // Revert the transaction if the call fails
-            require(success, "RefundFailed");
+            if (escrow.primaryLeg.paymentType == EscrowPaymentType.Native) {
+                _refundNative(escrow.secondaryLeg);
+            }
+            else if (escrow.secondaryLeg.paymentType == EscrowPaymentType.Native) {
+                _refundNative(escrow.primaryLeg);
+            }
         }
         else {
-            IERC20 token = IERC20(currency);
-            uint256 balance = token.balanceOf(address(this));
-            require(balance > 0, "ZeroBalance");
-            require(token.transfer(payer, balance), "RefundFailed");
+            if (escrow.primaryLeg.currency == currency) {
+                _refundERC20(escrow.primaryLeg, escrow.secondaryLeg);
+            }
+            else if (escrow.secondaryLeg.currency == currency) {
+                _refundERC20(escrow.secondaryLeg, escrow.primaryLeg);
+            }
         }
     }
 
@@ -144,6 +142,26 @@ contract RelayNode is Pausable {
     }
 
     function _relayERC721(EscrowDefinition memory escrow, EscrowLeg memory leg) internal {
+        //TODO: implement
+    }
+
+    function _refundNative(EscrowLeg memory toLeg) internal {
+        uint256 balance = address(this).balance;
+        if (balance > 0) {
+            (bool success,) = payable(toLeg.participantAddress).call{value: balance}("");
+        }
+    }
+
+    function _refundERC20(EscrowLeg memory fromLeg, EscrowLeg memory toLeg) internal {
+        IERC20 token = IERC20(fromLeg.currency);
+        uint256 balance = token.balanceOf(address(this));
+
+        if (balance > 0) {
+            token.transfer(toLeg.participantAddress, balance);
+        }
+    }
+
+    function _refundERC721(EscrowLeg memory fromLeg, EscrowLeg memory toLeg) internal {
         //TODO: implement
     }
 }
