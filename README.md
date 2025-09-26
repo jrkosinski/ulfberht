@@ -161,4 +161,10 @@ If funds have been transferred into the relay node contract, but before they hav
 
 ## Arbitration
 
+### Who can Propose
+
+### Proposal Structure
+
+### Proposal Lifecycle
+
 ## Lifecycle of an Escrow

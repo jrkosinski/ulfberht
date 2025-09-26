@@ -106,19 +106,6 @@ struct FeeDefinition {
 }
 
 /**
- * ArbitrationDefinition: defines how arbitration is handled for an escrow
- * --------------------------------------------------------------------------
- * An array of arbiters (addresses) who are allowed to vote on arbitration proposals. 
- * An arbitration module, which may be a smart contract that implements specific logic for handling arbitration. 
- * A quorum, which is the minimum number of votes required for an arbitration proposal to be considered valid.
- */
-struct ArbitrationDefinition {
-    address[] arbiters;
-    address arbitrationModule;
-    uint8 quorum;
-}
-
-/**
  * EscrowLeg: defines a participant side in an escrow
  * ----------------------------------------------------------
  * Each leg has an address, a currency (token address or 0x0 for native), a payment type (native, ERC20, etc.), 
@@ -158,5 +145,49 @@ struct EscrowArbitrationProposal {
     uint256 amount;
     uint8[] votes;
     ProposalStatus status;
+}
+
+/**
+ * ArbitrationDefinition: defines how arbitration is handled for an escrow
+ * --------------------------------------------------------------------------
+ * An array of arbiters (addresses) who are allowed to vote on arbitration proposals. 
+ * An arbitration module, which may be a smart contract that implements specific logic for handling arbitration. 
+ * A quorum, which is the minimum number of votes required for an arbitration proposal to be considered valid.
+ */
+struct ArbitrationDefinition {
+    address[] arbiters;
+    address arbitrationModule;
+    uint8 quorum;
+}
+
+
+enum ArbitrationAction { None, Refund, Release }
+enum ArbitrationStatus { Active, Rejected, Accepted, Executed, Canceled }
+enum ArbitrationVote { None, Yea, Nay }
+
+/**
+ * ArbitrationProposal: Defines 1-2 actions to be taken for the purpose of arbitration
+ * -----------------------------------------------------------------------------------
+ */
+struct ArbitrationProposal {
+    //identification
+    address escrowAddress;
+    bytes32 id;
+    bytes32 escrowId;
+
+    //status & options
+    ArbitrationStatus status;
+    address proposer;
+    bool autoExecute;
+
+    //votes
+    uint256 votesFor;
+    uint256 votesAgainst;
+
+    //action
+    ArbitrationAction primaryLegAction;
+    ArbitrationAction secondaryLegAction;
+    uint256 primaryLegAmount;
+    uint256 secondaryLegAmount;
 }
 
