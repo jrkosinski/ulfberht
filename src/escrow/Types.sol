@@ -155,8 +155,8 @@ struct EscrowArbitrationProposal {
  * A quorum, which is the minimum number of votes required for an arbitration proposal to be considered valid.
  */
 struct ArbitrationDefinition {
-    address[] arbiters;
     address arbitrationModule;
+    address[] arbiters;
     uint8 quorum;
 }
 

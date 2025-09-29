@@ -100,6 +100,10 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         _setSecurityContext(securityContext);
         settings = systemSettings;
         defaultArbitrationModule = _defaultArbitrationModule;
+
+        //EXCEPTION: InvalidArbitrationModule 
+        require(address(_defaultArbitrationModule) != address(0), "InvalidArbitrationModule");
+        require(_isValidArbitrationModule(_defaultArbitrationModule), "InvalidArbitrationModule");
     }
 
 
@@ -206,6 +210,14 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         //arbitration and status
         escrow.arbitration = input.arbitration;        
         escrow.status = EscrowStatus.Pending;
+
+        //validate arbitration module
+        if (address(input.arbitration.arbitrationModule) != address(0)) {
+            //EXCEPTION: InvalidArbitrationModule
+            require(_isValidArbitrationModule(IArbitrationModule(input.arbitration.arbitrationModule)), "InvalidArbitrationModule");
+        }
+        else 
+            escrow.arbitration.arbitrationModule = address(defaultArbitrationModule);
 
         //store the escrow
         escrows[input.id] = escrow;
@@ -440,6 +452,17 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
      * @param state If true, sets the state to Arbitration. If false, sets the state to Active.
      */
     function setArbitration(bytes32 escrowId, bool state) external {
+        //EXCEPTION: InvalidEscrow 
+        require(escrows[escrowId].id == escrowId, "InvalidEscrow");
+
+        //EXCEPTION: Unauthorized 
+        //only the arbitration module may call this 
+        require(msg.sender == address(escrows[escrowId].arbitration.arbitrationModule), "Unauthorized");
+
+        if (state)
+            escrows[escrowId].status = EscrowStatus.Arbitration;
+        else
+            escrows[escrowId].status = EscrowStatus.Active;
     }
 
 
@@ -589,6 +612,19 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
 
     function _getEscrowAmountRemaining(EscrowLeg memory leg) internal pure returns (uint256) {
         return leg.amountPaid - leg.amountRefunded - leg.amountReleased;
+    }
+
+    function _isValidArbitrationModule(IArbitrationModule arbitrationModule) internal view returns (bool) {
+        if (address(arbitrationModule) == address(0)) {
+            return false;
+        }
+
+        (bool success, bytes memory data) = address(arbitrationModule).staticcall(
+            abi.encodeWithSelector(bytes4(keccak256("isArbitrationModule()")))
+        );
+        if (!(success && data.length == 32)) return false;
+
+        return abi.decode(data, (bool)); 
     }
 }
 

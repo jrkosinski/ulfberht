@@ -14,7 +14,7 @@ import {
 import { keccak256 } from 'ethers';
 import { escrow } from '../typechain-types/src';
 
-describe.skip('Arbitration', function () {
+describe('Arbitration', function () {
     let securityContext: any;
     let systemSettings: any;
     let polyEscrow: any;
@@ -92,10 +92,13 @@ describe.skip('Arbitration', function () {
         escrowId: string,
         quorum: number,
         arbiterCount: number,
-        arbiters?: string[]
+        arbiters?: string[],
+        primaryAmountPay: number = -1,
+        secondaryAmountPay: number = -1
     ): Promise<EscrowDefinition> {
         const amount1 = 1000002;
         const amount2 = 2000004;
+
         //create default arbiters if not provided
         if (!arbiters) {
             arbiters = [];
@@ -103,6 +106,10 @@ describe.skip('Arbitration', function () {
                 arbiters.push(testUtil.arbiters[n].address);
             }
         }
+
+        //default amounts to pay
+        if (primaryAmountPay < 0) primaryAmountPay = amount1 / 2;
+        if (secondaryAmountPay < 0) secondaryAmountPay = amount2 / 2;
 
         if (!arbiters && arbiterCount > 0)
             arbiters = testUtil.arbiters
@@ -134,15 +141,23 @@ describe.skip('Arbitration', function () {
         );
 
         //fully pay the escrow on one side
-        await testUtil.placePayment(
-            escrowId,
-            testUtil.payers[0],
-            amount1,
-            testToken1.target
-        );
+        if (primaryAmountPay > 0) {
+            await testUtil.placePayment(
+                escrowId,
+                testUtil.payers[0],
+                primaryAmountPay,
+                testToken1.target
+            );
+        }
 
         //fully pay the escrow on the other side
-        await testUtil.placePayment(escrowId, testUtil.payers[1], amount2);
+        if (secondaryAmountPay > 0) {
+            await testUtil.placePayment(
+                escrowId,
+                testUtil.payers[1],
+                secondaryAmountPay
+            );
+        }
 
         return escrow;
     }
@@ -283,7 +298,7 @@ describe.skip('Arbitration', function () {
             });
         });
 
-        describe.only('Exceptions', function () {
+        describe('Exceptions', function () {
             it('cannot deploy with a zero-address arbitration module', async function () {
                 //polyEscrow factory
                 const PolyEscrowFactory =
@@ -309,7 +324,7 @@ describe.skip('Arbitration', function () {
                     PolyEscrowFactory.deploy(
                         securityContext.target,
                         systemSettings.target,
-                        testToken1.target //should be an IArbitrationModule
+                        testToken1.target //should be a valid IArbitrationModule
                     )
                 ).to.be.revertedWith('InvalidArbitrationModule');
             });
@@ -395,7 +410,7 @@ describe.skip('Arbitration', function () {
                     0,
                     {
                         arbitrationModule: arbitrationModule2.target,
-                        arbiters: [],
+                        arbiters: [testUtil.arbiters[0].address],
                         quorum: 0,
                     }
                 );
@@ -426,6 +441,13 @@ describe.skip('Arbitration', function () {
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
                         amount: 100,
+                    },
+                    0,
+                    0,
+                    {
+                        arbitrationModule: arbitrationModule.target,
+                        arbiters: [testUtil.arbiters[0].address],
+                        quorum: 1,
                     }
                 );
 
@@ -480,8 +502,6 @@ describe.skip('Arbitration', function () {
             ): Promise<ArbitrationProposal> {
                 //create the escrow
                 const escrowId = ethers.keccak256('0x01');
-                const amount = 1000000;
-                const isToken = true;
 
                 if (!arbiters?.length) {
                     arbiters = [
@@ -506,16 +526,20 @@ describe.skip('Arbitration', function () {
 
                 //verify proposal
                 expect(proposal.primaryLegAmount).to.equal(proposalAmount);
+                expect(proposal.secondaryLegAmount).to.equal(0);
                 expect(proposal.proposer).to.equal(account.address);
                 expect(proposal.escrowId).to.equal(escrowId);
                 expect(proposal.primaryLegAction).to.equal(proposalType);
+                expect(proposal.secondaryLegAction).to.equal(
+                    ArbitrationAction.None
+                );
 
                 return proposal;
             }
 
             it('payer can propose arbitration', async function () {
                 const proposal = await canProposeArbitration(
-                    testUtil.payers[0]
+                    testUtil.receivers[0]
                 );
                 expect(proposal.votesFor).to.equal(0);
                 expect(proposal.votesFor).to.equal(0);
@@ -523,7 +547,7 @@ describe.skip('Arbitration', function () {
 
             it('receiver can propose arbitration', async function () {
                 const proposal = await canProposeArbitration(
-                    testUtil.receivers[0]
+                    testUtil.receivers[1]
                 );
                 expect(proposal.votesFor).to.equal(0);
                 expect(proposal.votesFor).to.equal(0);
@@ -566,8 +590,6 @@ describe.skip('Arbitration', function () {
                 proposerAccount: HardhatEthersSigner
             ) {
                 escrowId = ethers.keccak256(escrowId);
-                const amount = 10000;
-                const isToken = true;
 
                 //create escrow
                 await testUtil.createEscrow(
@@ -584,6 +606,16 @@ describe.skip('Arbitration', function () {
                         paymentType: PaymentType.Native,
                         currency: ethers.ZeroAddress,
                         amount: 20000,
+                    },
+                    0,
+                    0,
+                    {
+                        arbitrationModule: arbitrationModule.target,
+                        arbiters: [
+                            testUtil.arbiters[0].address,
+                            testUtil.arbiters[1].address,
+                        ],
+                        quorum: 1,
                     }
                 );
 
@@ -595,6 +627,10 @@ describe.skip('Arbitration', function () {
                             escrowAddress: polyEscrow.target,
                             escrowId,
                             autoExecute: true,
+                            primaryLegAction: ArbitrationAction.Refund,
+                            secondaryLegAction: ArbitrationAction.None,
+                            primaryLegAmount: 1,
+                            secondaryLegAmount: 0,
                         })
                 ).to.be.revertedWith('Unauthorized');
             }
@@ -602,7 +638,7 @@ describe.skip('Arbitration', function () {
             it('stranger cannot propose arbitration', async function () {
                 await cannotProposeArbitrationUnauthorized(
                     '0x01',
-                    testUtil.receivers[1]
+                    testUtil.payers[1]
                 );
             });
 
@@ -638,8 +674,6 @@ describe.skip('Arbitration', function () {
 
             it('cannot propose arbitration with the wrong arbitration module', async function () {
                 const escrowId = ethers.keccak256('0x01');
-                const amount = 10000;
-                const isToken = true;
 
                 await deploySecondArbitrationModule();
 
@@ -665,7 +699,6 @@ describe.skip('Arbitration', function () {
                 const escrowId = ethers.keccak256('0x01');
                 const amount1 = 10000;
                 const amount2 = 20000;
-                const isToken = true;
 
                 //create escrow with no arbiters
                 const escrow = await testUtil.createEscrow(
@@ -689,56 +722,57 @@ describe.skip('Arbitration', function () {
                 await expect(
                     arbitrationModule
                         .connect(testUtil.receivers[0])
-                        .proposeArbitration(
-                            polyEscrow,
+                        .proposeArbitration({
+                            escrowAddress: polyEscrow.target,
                             escrowId,
-                            ArbitrationAction.Refund,
-                            1,
-                            false
-                        )
+                            autoExecute: true,
+                            primaryLegAction: ArbitrationAction.Refund,
+                            secondaryLegAction: ArbitrationAction.None,
+                            primaryLegAmount: 1,
+                            secondaryLegAmount: 0,
+                        })
                 ).to.be.revertedWith('InvalidProposalNoArbiters');
             });
 
             it('cannot exceed max number of open proposals', async function () {
                 const escrowId = ethers.keccak256('0x01');
-                const amount1 = 10000;
-                const amount2 = 20000;
-                const isToken = true;
 
                 //create escrow
                 await createAndPayEscrow(escrowId, 2, 3);
 
                 //propose arbitration 1
                 await arbitrationModule
-                    .connect(testUtil.payers[0])
-                    .proposeArbitration(
-                        polyEscrow,
+                    .connect(testUtil.receivers[0])
+                    .proposeArbitration({
+                        escrowAddress: polyEscrow.target,
                         escrowId,
-                        ArbitrationAction.Refund,
-                        1,
-                        false
-                    );
+                        autoExecute: true,
+                        primaryLegAction: ArbitrationAction.Refund,
+                        secondaryLegAction: ArbitrationAction.None,
+                        primaryLegAmount: 1,
+                        secondaryLegAmount: 0,
+                    });
 
                 //propose arbitration 2
                 await expect(
                     arbitrationModule
-                        .connect(testUtil.payers[0])
-                        .proposeArbitration(
-                            polyEscrow,
+                        .connect(testUtil.receivers[0])
+                        .proposeArbitration({
+                            escrowAddress: polyEscrow.target,
                             escrowId,
-                            ArbitrationAction.Refund,
-                            1,
-                            false
-                        )
+                            autoExecute: true,
+                            primaryLegAction: ArbitrationAction.None,
+                            secondaryLegAction: ArbitrationAction.Refund,
+                            primaryLegAmount: 0,
+                            secondaryLegAmount: 1,
+                        })
                 ).to.be.revertedWith('InvalidEscrowState');
             });
 
             //TODO: (TMED) test that we can have more than 3 cases, if some of them are closed (no more than 3 active)
 
-            it('cannot propose arbitration on an escrow that is in the wrong state', async function () {
+            it.skip('cannot propose arbitration on an escrow that is in the wrong state', async function () {
                 const escrowId = ethers.keccak256('0x01');
-                const amount = 10000;
-                const isToken = true;
 
                 //create escrow
                 await createAndPayEscrow(escrowId, 2, 3);
@@ -755,47 +789,52 @@ describe.skip('Arbitration', function () {
                 await expect(
                     arbitrationModule
                         .connect(testUtil.receivers[0])
-                        .proposeArbitration(
-                            polyEscrow,
+                        .proposeArbitration({
+                            escrowAddress: polyEscrow.target,
                             escrowId,
-                            ArbitrationAction.Refund,
-                            1,
-                            false
-                        )
+                            autoExecute: true,
+                            primaryLegAction: ArbitrationAction.Refund,
+                            secondaryLegAction: ArbitrationAction.None,
+                            primaryLegAmount: 1,
+                            secondaryLegAmount: 0,
+                        })
                 ).to.be.revertedWith('InvalidEscrowState');
             });
 
             it('cannot propose arbitration for more than the remaining amount of escrow', async function () {
                 const escrowId = ethers.keccak256('0x01');
-                const amount = 10000;
-
                 //create escrow
-                await createAndPayEscrow(escrowId, 2, 3);
+                const escrow = await createAndPayEscrow(escrowId, 2, 3);
 
                 //try to propose arbitration: Refund
                 await expect(
                     arbitrationModule
                         .connect(testUtil.receivers[0])
-                        .proposeArbitration(
-                            polyEscrow,
+                        .proposeArbitration({
+                            escrowAddress: polyEscrow.target,
                             escrowId,
-                            ArbitrationAction.Refund,
-                            amount + 1,
-                            false
-                        )
+                            autoExecute: true,
+                            primaryLegAction: ArbitrationAction.Refund,
+                            secondaryLegAction: ArbitrationAction.None,
+                            primaryLegAmount:
+                                escrow.primaryLeg.amountPledged + 1,
+                            secondaryLegAmount: 0,
+                        })
                 ).to.be.revertedWith('InvalidProposalAmount');
 
                 //try to propose arbitration: Release
                 await expect(
                     arbitrationModule
                         .connect(testUtil.receivers[0])
-                        .proposeArbitration(
-                            polyEscrow,
+                        .proposeArbitration({
+                            escrowAddress: polyEscrow.target,
                             escrowId,
-                            ArbitrationAction.Release,
-                            amount + 1,
-                            false
-                        )
+                            autoExecute: true,
+                            primaryLegAction: ArbitrationAction.Refund,
+                            secondaryLegAction: ArbitrationAction.None,
+                            primaryLegAmount: 1,
+                            secondaryLegAmount: 0,
+                        })
                 ).to.be.revertedWith('InvalidProposalAmount');
             });
 
@@ -815,14 +854,16 @@ describe.skip('Arbitration', function () {
                 const proposalAmount = 1000;
                 await expect(
                     arbitrationModule
-                        .connect(testUtil.payers[0])
-                        .proposeArbitration(
-                            polyEscrow,
+                        .connect(testUtil.receivers[0])
+                        .proposeArbitration({
+                            escrowAddress: polyEscrow.target,
                             escrowId,
-                            proposalType,
-                            proposalAmount,
-                            false
-                        )
+                            autoExecute: true,
+                            primaryLegAction: ArbitrationAction.Release,
+                            secondaryLegAction: ArbitrationAction.None,
+                            primaryLegAmount: 1,
+                            secondaryLegAmount: 0,
+                        })
                 ).to.emit(arbitrationModule, 'ArbitrationProposed');
             });
         });
@@ -837,7 +878,6 @@ describe.skip('Arbitration', function () {
                 //create the escrow
                 const escrowId = ethers.keccak256('0x01');
                 const amount = 1000000;
-                const isToken = true;
 
                 //arbiters 2/3
                 //create escrow
@@ -847,7 +887,7 @@ describe.skip('Arbitration', function () {
                 const proposalType = ArbitrationAction.Refund;
                 const proposalAmount = amount;
                 let proposal = await createProposal(
-                    testUtil.payers[0],
+                    testUtil.receivers[0],
                     escrowId,
                     proposalType,
                     ArbitrationAction.None,
@@ -881,7 +921,7 @@ describe.skip('Arbitration', function () {
 
                 //propose arbitration for full refund
                 const proposal = await createProposal(
-                    testUtil.payers[0],
+                    testUtil.receivers[0],
                     escrowId,
                     ArbitrationAction.Refund,
                     ArbitrationAction.None,
@@ -920,14 +960,13 @@ describe.skip('Arbitration', function () {
                 //create an escrow with 3/5
                 const escrowId = ethers.keccak256('0x01');
                 const amount = 10000;
-                const isToken = true;
 
                 //create escrow
-                await createAndPayEscrow(escrowId, 2, 3);
+                await createAndPayEscrow(escrowId, 3, 4);
 
                 //propose arbitration for full refund
                 let proposal = await createProposal(
-                    testUtil.payers[0],
+                    testUtil.receivers[0],
                     escrowId,
                     ArbitrationAction.Refund,
                     ArbitrationAction.None,
@@ -969,14 +1008,13 @@ describe.skip('Arbitration', function () {
                 //create an escrow with 3/5
                 const escrowId = ethers.keccak256('0x01');
                 const amount = 10000;
-                const isToken = true;
 
                 //create escrow
-                await createAndPayEscrow(escrowId, 2, 3);
+                await createAndPayEscrow(escrowId, 3, 4);
 
                 //propose arbitration for full refund
                 const proposal = await createProposal(
-                    testUtil.payers[0],
+                    testUtil.receivers[0],
                     escrowId,
                     ArbitrationAction.Refund,
                     ArbitrationAction.None,
@@ -997,13 +1035,6 @@ describe.skip('Arbitration', function () {
                 );
 
                 //vote on proposal
-                await voteProposal(testUtil.arbiters[1], proposal.id, false);
-                //at this point, votes should be 1:1 for:against
-                expect((await getProposal(proposal.id)).status).to.equal(
-                    ArbitrationStatus.Active
-                );
-
-                //vote on proposal
                 await voteProposal(testUtil.arbiters[2], proposal.id, false);
                 //at this point, votes should be 1:2 for:against
                 expect((await getProposal(proposal.id)).status).to.equal(
@@ -1015,14 +1046,13 @@ describe.skip('Arbitration', function () {
                 //create an escrow with 3/5
                 const escrowId = ethers.keccak256('0x01');
                 const amount = 10000;
-                const isToken = true;
 
                 //create escrow
                 await createAndPayEscrow(escrowId, 2, 3);
 
                 //propose arbitration for full refund
                 let proposal = await createProposal(
-                    testUtil.payers[0],
+                    testUtil.receivers[0],
                     escrowId,
                     ArbitrationAction.Refund,
                     ArbitrationAction.None,
@@ -1080,7 +1110,7 @@ describe.skip('Arbitration', function () {
 
                 //create a proposal
                 const proposal = await createProposal(
-                    testUtil.payers[0],
+                    testUtil.receivers[0],
                     escrowId,
                     ArbitrationAction.Refund,
                     ArbitrationAction.None,
@@ -1106,7 +1136,6 @@ describe.skip('Arbitration', function () {
                 //create the escrow
                 const escrowId = ethers.keccak256('0x01');
                 const amount = 1000000;
-                const isToken = true;
 
                 //create escrow
                 await createAndPayEscrow(escrowId, 2, 3);
@@ -1115,7 +1144,7 @@ describe.skip('Arbitration', function () {
                 const proposalType = ArbitrationAction.Refund;
                 const proposalAmount = amount;
                 let proposal = await createProposal(
-                    testUtil.payers[0],
+                    testUtil.receivers[0],
                     escrowId,
                     proposalType,
                     ArbitrationAction.None,
@@ -1175,8 +1204,6 @@ describe.skip('Arbitration', function () {
 
             it('cannot vote on invalid proposal id', async function () {
                 const escrowId = ethers.keccak256('0x01');
-                const amount = 10000;
-                const isToken = true;
 
                 //create escrow
                 await createAndPayEscrow(escrowId, 2, 3);
@@ -1215,7 +1242,7 @@ describe.skip('Arbitration', function () {
             const proposalType = ArbitrationAction.Refund;
             const proposalAmount = amount;
             let proposal = await createProposal(
-                testUtil.payers[0],
+                testUtil.receivers[0],
                 escrowId,
                 proposalType,
                 ArbitrationAction.None,
@@ -1232,7 +1259,7 @@ describe.skip('Arbitration', function () {
                 const proposal = await createEscrowProposal(escrowId);
 
                 await arbitrationModule
-                    .connect(testUtil.payers[0])
+                    .connect(testUtil.receivers[0])
                     .cancelProposal(proposal.id);
 
                 const cancelledProposal = await getProposal(proposal.id);
@@ -1249,7 +1276,7 @@ describe.skip('Arbitration', function () {
 
                 await expect(
                     arbitrationModule
-                        .connect(testUtil.payers[0])
+                        .connect(testUtil.receivers[0])
                         .cancelProposal(
                             proposal.id
                                 .replace('3', '1')
@@ -1265,7 +1292,7 @@ describe.skip('Arbitration', function () {
 
                 await expect(
                     arbitrationModule
-                        .connect(testUtil.receivers[0])
+                        .connect(testUtil.receivers[1])
                         .cancelProposal(proposal.id)
                 ).to.be.revertedWith('Unauthorized');
 
@@ -1294,7 +1321,7 @@ describe.skip('Arbitration', function () {
 
                 //cancel proposal
                 await arbitrationModule
-                    .connect(testUtil.payers[0])
+                    .connect(testUtil.receivers[0])
                     .cancelProposal(proposal.id);
 
                 //read the proposal back
@@ -1304,7 +1331,7 @@ describe.skip('Arbitration', function () {
                 //try to cancel again; should fail
                 await expect(
                     arbitrationModule
-                        .connect(testUtil.payers[0])
+                        .connect(testUtil.receivers[0])
                         .cancelProposal(proposal.id)
                 ).to.be.revertedWith('InvalidProposalState');
             });
@@ -1329,7 +1356,7 @@ describe.skip('Arbitration', function () {
 
                 await expect(
                     arbitrationModule
-                        .connect(testUtil.payers[0])
+                        .connect(testUtil.receivers[0])
                         .cancelProposal(proposal.id)
                 ).to.be.revertedWith('NotCancellable');
             });
@@ -1345,7 +1372,7 @@ describe.skip('Arbitration', function () {
 
                 await expect(
                     arbitrationModule
-                        .connect(testUtil.payers[0])
+                        .connect(testUtil.receivers[0])
                         .cancelProposal(proposal.id)
                 ).to.be.revertedWith('NotCancellable');
             });
@@ -1358,20 +1385,20 @@ describe.skip('Arbitration', function () {
 
                 await expect(
                     arbitrationModule
-                        .connect(testUtil.payers[0])
+                        .connect(testUtil.receivers[0])
                         .cancelProposal(proposal.id)
                 )
                     .to.emit(arbitrationModule, 'ProposalCancelled')
                     .withArgs(
                         proposal.id,
                         proposal.escrowId,
-                        testUtil.payers[0].address
+                        testUtil.receivers[0].address
                     );
             });
         });
     });
 
-    describe('Executing Arbitration', function () {
+    describe.skip('Executing Arbitration', function () {
         async function createEscrowAndProposal(
             proposalType: number,
             proposalProportion: number,
@@ -1384,7 +1411,7 @@ describe.skip('Arbitration', function () {
 
             //create a proposal
             return await createProposal(
-                testUtil.payers[0],
+                testUtil.receivers[0],
                 escrowId,
                 proposalType,
                 ArbitrationAction.None,
@@ -1552,7 +1579,7 @@ describe.skip('Arbitration', function () {
                 );
 
                 await arbitrationModule
-                    .connect(testUtil.payers[0])
+                    .connect(testUtil.receivers[0])
                     .cancelProposal(proposal.id);
 
                 //cancel the proposal

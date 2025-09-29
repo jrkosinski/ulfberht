@@ -17,6 +17,9 @@ struct ArbitrationProposalInput {
     ArbitrationAction secondaryLegAction;
     uint256 primaryLegAmount;
     uint256 secondaryLegAmount;
+
+    //TODO: quorum should be part of the proposal
+    //TODO: arbiters should be part of the proposal
 }
 
 interface IArbitrationModule
