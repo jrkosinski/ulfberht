@@ -134,9 +134,8 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
      */
     function createEscrow(CreateEscrowInput memory input) public whenNotPaused {
 
-        // -------------
-        // VALIDATION 
-        // -------------
+        /* --- VALIDATION --- 
+        **********************************************************************************/
 
         //EXCEPTION: InvalidEscrow
         require(input.id != 0, "InvalidEscrow");
@@ -270,6 +269,9 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         whenNotCompleted(paymentInput.escrowId)
         whenNotInArbitration(paymentInput.escrowId)
     {
+        /* --- VALIDATION --- 
+        **********************************************************************************/
+
         //EXCEPTION: InvalidAmount
         require(paymentInput.amount > 0, "InvalidAmount");
 
@@ -323,6 +325,10 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
             require(msg.value >= paymentInput.amount, "InvalidAmount");
         }
 
+
+        /* --- EXECUTION --- 
+        **********************************************************************************/
+
         //if token, transfer the specified amount in 
         else if (payer.paymentType == EscrowPaymentType.ERC20) {
             //transfer the tokens in 
@@ -351,6 +357,10 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
             _releaseEscrow(paymentInput.escrowId);
         }
 
+
+        /* --- EVENTS --- 
+        **********************************************************************************/
+        
         //EVENT: emit payment received event
         emit PaymentReceived(
             paymentInput.escrowId,
@@ -382,11 +392,18 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
     function deployRelayNode(bytes32 escrowId, bool autoForwardNative) 
         whenNotPaused whenNotCompleted(escrowId) whenNotInArbitration(escrowId) external {
 
+        /* --- VALIDATION --- 
+        **********************************************************************************/
+
         //EXCEPTION: InvalidEscrow
         require(hasEscrow(escrowId), "InvalidEscrow");
 
         //EXCEPTION: MaxRelayNodesExceeded
         require(relayNodes[escrowId].length < MAX_RELAY_NODES_PER_ESCROW, "MaxRelayNodesExceeded");
+
+
+        /* --- EXECUTION --- 
+        **********************************************************************************/
 
         //deploy the relay node
         RelayNode relayNode = new RelayNode(
@@ -396,6 +413,10 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
             autoForwardNative
         );
         relayNodes[escrowId].push(relayNode);
+
+
+        /* --- EVENTS --- 
+        **********************************************************************************/
 
         //EVENT: RelayNodeDeployed
         emit RelayNodeDeployed(address(relayNode), escrowId);
@@ -437,6 +458,16 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
      * @param escrowId The unique escrow id for the arbitration proposal to execute.
      */
     function executeArbitrationProposal(bytes32 escrowId) external {
+        /* --- VALIDATION --- 
+        **********************************************************************************/
+
+
+        /* --- EXECUTION --- 
+        **********************************************************************************/
+
+
+        /* --- EVENTS --- 
+        **********************************************************************************/
     }
 
     /**
@@ -452,12 +483,20 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
      * @param state If true, sets the state to Arbitration. If false, sets the state to Active.
      */
     function setArbitration(bytes32 escrowId, bool state) external {
+
+        /* --- VALIDATION --- 
+        **********************************************************************************/
+
         //EXCEPTION: InvalidEscrow 
         require(escrows[escrowId].id == escrowId, "InvalidEscrow");
 
         //EXCEPTION: Unauthorized 
         //only the arbitration module may call this 
         require(msg.sender == address(escrows[escrowId].arbitration.arbitrationModule), "Unauthorized");
+
+
+        /* --- EXECUTION --- 
+        **********************************************************************************/
 
         if (state)
             escrows[escrowId].status = EscrowStatus.Arbitration;

@@ -127,6 +127,10 @@ contract ArbitrationModule is IArbitrationModule
      * @param input Properties of proposal. 
      */
     function proposeArbitration(ArbitrationProposalInput calldata input) external virtual {
+
+        /* --- VALIDATION --- 
+        **********************************************************************************/
+
         //get the relevant escrow
         //EXCEPTION: InvalidEscrow
         //EXCEPTION: InvalidArbitrationModule
@@ -162,6 +166,10 @@ contract ArbitrationModule is IArbitrationModule
             }
         }
         
+
+        /* --- EXECUTION --- 
+        **********************************************************************************/
+
         //generate a unique id
         bytes32 propId = _generateUniqueProposalId(IPolyEscrow(input.escrowAddress), input.escrowId);
         proposals[propId].id = propId;
@@ -189,6 +197,10 @@ contract ArbitrationModule is IArbitrationModule
         //set the escrow into Arbitration state 
         IPolyEscrow(input.escrowAddress).setArbitration(input.escrowId, true);
 
+        
+        /* --- EVENTS --- 
+        **********************************************************************************/
+
         //raise event 
         emit ArbitrationProposed(proposals[propId].id, proposals[propId].escrowId, msg.sender);
     }
@@ -213,6 +225,8 @@ contract ArbitrationModule is IArbitrationModule
      */
     function voteProposal(bytes32 proposalId, bool vote) external virtual {
         
+        /* --- VALIDATION --- 
+        **********************************************************************************/
         // WHO can vote on arbitration?  arbiters only
 
         //get the arbitration proposal
@@ -237,8 +251,19 @@ contract ArbitrationModule is IArbitrationModule
         //EXCEPTION: InvalidProposalState
         require(proposal.status == ArbitrationStatus.Active, "InvalidProposalState"); //NOT COVERED
 
+
+        /* --- EXECUTION --- 
+        **********************************************************************************/
+
         //record vote 
         _voteProposal(polyEscrow, escrow, proposal, vote);
+
+
+        /* --- EVENTS --- 
+        **********************************************************************************/
+
+        //raise event 
+        emit ProposalVoted(proposal.id, proposal.escrowId, msg.sender); //NOT COVERED
     }
 
     /**
@@ -256,6 +281,10 @@ contract ArbitrationModule is IArbitrationModule
      * @param proposalId The unique proposal id to cancel
      */
     function cancelProposal(bytes32 proposalId) external virtual {
+
+        /* --- VALIDATION --- 
+        **********************************************************************************/
+
         //get the arbitration proposal
         //EXCEPTION: InvalidProposal 
         ArbitrationProposal storage proposal = proposals[proposalId];
@@ -274,11 +303,19 @@ contract ArbitrationModule is IArbitrationModule
         //EXCEPTION: InvalidProposalState
         require(proposal.status == ArbitrationStatus.Active, "InvalidProposalState");
 
+
+        /* --- EXECUTION --- 
+        **********************************************************************************/
+
         //set proposal to cancelled
         proposal.status = ArbitrationStatus.Canceled;
 
         //unset arbitration
         polyEscrow.setArbitration(proposal.escrowId, false);
+
+
+        /* --- EVENTS --- 
+        **********************************************************************************/
 
         //emit event
         emit ProposalCancelled(proposal.id, proposal.escrowId, msg.sender);
@@ -300,6 +337,10 @@ contract ArbitrationModule is IArbitrationModule
      * @param proposalId The unique proposal id to execute
      */
     function executeProposal(bytes32 proposalId) external virtual {
+
+        /* --- VALIDATION --- 
+        **********************************************************************************/
+
         //get the arbitration proposal
         //EXCEPTION: InvalidProposal 
         ArbitrationProposal storage proposal = proposals[proposalId];
@@ -332,12 +373,16 @@ contract ArbitrationModule is IArbitrationModule
         //get the escrow id
         bytes32 escrowId = proposal.escrowId;
 
-       //get the relevant escrow
+        //get the relevant escrow
         //EXCEPTION: InvalidEscrow
         //EXCEPTION: InvalidArbitrationModule
         _getAndCheckEscrow(polyEscrow, escrowId);
 
         //TODO: (HIGH) ensure that escrow is in correct state to have arbitration executed (what states would those be?)
+
+
+        /* --- EXECUTION --- 
+        **********************************************************************************/
 
         //execute 
         _executeProposal(polyEscrow, proposal);
@@ -437,9 +482,6 @@ contract ArbitrationModule is IArbitrationModule
             //unset arbitration mode
             polyEscrow.setArbitration(proposal.escrowId, false);
         }
-
-        //raise event 
-        emit ProposalVoted(proposal.id, proposal.escrowId, msg.sender); //NOT COVERED
     }
 
     function _getAndCheckEscrow(IPolyEscrow polyEscrow, bytes32 escrowId) internal view returns (EscrowDefinition memory) {
