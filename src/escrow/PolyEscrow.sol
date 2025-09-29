@@ -6,6 +6,7 @@ import "../security/HasSecurityContext.sol";
 import "../utility/CarefulMath.sol";
 import "../interfaces/ISystemSettings.sol";
 import "../interfaces/IPolyEscrow.sol";
+import "../interfaces/IArbitrationModule.sol";
 import "../utility/IsErc20.sol";
 import "../utility/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -39,6 +40,7 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
     mapping(bytes32 => EscrowDefinition) internal escrows;
     mapping(bytes32 => RelayNode[]) internal relayNodes;
     ISystemSettings public settings;
+    IArbitrationModule public defaultArbitrationModule;
 
     // -----------
     // MODIFIERS 
@@ -86,14 +88,18 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
      * 
      * @param securityContext Security context is required.
      * @param systemSettings System settings contains information about the value and fee.
+     * @param _defaultArbitrationModule Default arbitration module will be used for all escrows which have no arbitration
+     * module otherwise defined.
      */
     constructor(
         ISecurityContext securityContext, 
-        ISystemSettings systemSettings
+        ISystemSettings systemSettings,
+        IArbitrationModule _defaultArbitrationModule
     ) Pausable(securityContext) 
     {
         _setSecurityContext(securityContext);
         settings = systemSettings;
+        defaultArbitrationModule = _defaultArbitrationModule;
     }
 
 

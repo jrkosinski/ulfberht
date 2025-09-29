@@ -92,7 +92,8 @@ describe('RelayNode', function () {
             await hre.ethers.getContractFactory('PolyEscrow');
         polyEscrow = await PolyEscrowFactory.deploy(
             securityContext.target,
-            systemSettings.target
+            systemSettings.target,
+            ethers.ZeroAddress
         );
 
         //create test util

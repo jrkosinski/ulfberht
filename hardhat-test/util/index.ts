@@ -51,6 +51,44 @@ export interface ArbitrationDefinition {
     quorum: number; //number of arbiters required to rule
 }
 
+export interface ArbitrationProposalInput {
+    //identification
+    escrowAddress: string;
+    id: string;
+    escrowId: string;
+
+    //status & options
+    autoExecute: boolean;
+
+    //action
+    primaryLegAction: number;
+    secondaryLegAction: number;
+    primaryLegAmount: number;
+    secondaryLegAmount: number;
+}
+
+export interface ArbitrationProposal {
+    //identification
+    escrowAddress: string;
+    id: string;
+    escrowId: string;
+
+    //status & options
+    status: number;
+    proposer: string;
+    autoExecute: boolean;
+
+    //votes
+    votesFor: number;
+    votesAgainst: number;
+
+    //action
+    primaryLegAction: number;
+    secondaryLegAction: number;
+    primaryLegAmount: number;
+    secondaryLegAmount: number;
+}
+
 export interface EscrowLegInput {
     participantAddress: string;
     currency: string; //token address, or 0x0 for native
@@ -94,6 +132,28 @@ export function convertEscrow(rawData: any[]): EscrowDefinition {
     return output;
 }
 
+export function convertProposal(rawData: any[]): ArbitrationProposal {
+    const output: ArbitrationProposal = {
+        escrowAddress: rawData[0],
+        id: rawData[1],
+        escrowId: rawData[2],
+
+        status: rawData[3],
+        proposer: rawData[4],
+        autoExecute: rawData[5],
+
+        votesFor: rawData[6],
+        votesAgainst: rawData[7],
+
+        primaryLegAction: rawData[8],
+        secondaryLegAction: rawData[9],
+        primaryLegAmount: rawData[10],
+        secondaryLegAmount: rawData[11],
+    };
+
+    return output;
+}
+
 export const EscrowStatus = {
     Pending: 0,
     Active: 1,
@@ -107,6 +167,26 @@ export const PaymentType = {
     ERC721: 2,
     Bitcoin: 3,
     Custom: 4,
+};
+
+export const ArbitrationAction = {
+    None: 0,
+    Refund: 1,
+    Release: 2,
+};
+
+export const ArbitrationStatus = {
+    Active: 0,
+    Rejected: 1,
+    Accepted: 2,
+    Executed: 3,
+    Canceled: 4,
+};
+
+export const ArbitrationVote = {
+    None: 0,
+    Yea: 1,
+    Nay: 2,
 };
 
 export class TestUtil {
@@ -194,7 +274,12 @@ export class TestUtil {
         primaryLeg: EscrowLegInput,
         secondaryLeg: EscrowLegInput,
         startTime: number = 0,
-        endTime: number = 0
+        endTime: number = 0,
+        arbitration: ArbitrationDefinition = {
+            arbitrationModule: ethers.ZeroAddress,
+            arbiters: [],
+            quorum: 0,
+        }
     ): Promise<EscrowDefinition> {
         await this.polyEscrow.connect(creatorAccount).createEscrow({
             id: escrowId,
@@ -202,11 +287,7 @@ export class TestUtil {
             secondaryLeg,
             startTime,
             endTime,
-            arbitration: {
-                arbitrationModule: ethers.ZeroAddress,
-                arbiters: [],
-                quorum: 0,
-            },
+            arbitration,
             fees: [],
         });
 

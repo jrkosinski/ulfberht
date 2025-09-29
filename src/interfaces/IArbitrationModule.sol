@@ -7,7 +7,6 @@ import "./IPolyEscrow.sol";
 struct ArbitrationProposalInput {
     //identification
     address escrowAddress;
-    bytes32 id;
     bytes32 escrowId;
 
     //status & options
