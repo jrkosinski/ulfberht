@@ -463,7 +463,7 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
 
         //get the escrow and proposal
         EscrowDefinition storage escrow = escrows[escrowId];
-        ArbitrationProposal memory proposal = IArbitrationModule(escrow.arbitrationModule).getActiveProposal(escrowId);
+        ArbitrationProposal memory proposal = IArbitrationModule(escrow.arbitration.arbitrationModule).getActiveProposal(escrowId);
 
         //EXCEPTION: InvalidEscrow
         require(escrow.id != bytes32(0), "InvalidEscrow"); //NOT COVERED
@@ -471,12 +471,13 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         
         //EXCEPTION: Unauthorized 
         //TODO: test this 
-        require(msg.sender == address(escrow.arbitrationModule), "Unauthorized"); //NOT COVERED
+        require(msg.sender == address(escrow.arbitration.arbitrationModule), "Unauthorized"); //NOT COVERED
 
 
         /* --- EXECUTION --- 
         **********************************************************************************/
 
+/*
         if (proposal.primaryLegAction = ArbitrationAction.Refund) {
             //_refund(escrowId, )
         }
@@ -490,6 +491,7 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         else if (proposal.secondaryLegAction = ArbitrationAction.Release) {
             
         }
+        */
         
         //here now, if the status of the escrow is still Arbitration, we can set it back to Active
         // Because either (a) it is completed and was set to Completed, or (b) it was not completed; that means
