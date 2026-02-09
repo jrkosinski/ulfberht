@@ -360,7 +360,7 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
 
         /* --- EVENTS --- 
         **********************************************************************************/
-        
+
         //EVENT: emit payment received event
         emit PaymentReceived(
             paymentInput.escrowId,
@@ -461,9 +461,42 @@ contract PolyEscrow is HasSecurityContext, Pausable, IPolyEscrow {
         /* --- VALIDATION --- 
         **********************************************************************************/
 
+        //get the escrow and proposal
+        EscrowDefinition storage escrow = escrows[escrowId];
+        ArbitrationProposal memory proposal = IArbitrationModule(escrow.arbitrationModule).getActiveProposal(escrowId);
+
+        //EXCEPTION: InvalidEscrow
+        require(escrow.id != bytes32(0), "InvalidEscrow"); //NOT COVERED
+        require(escrow.id == proposal.escrowId, "InvalidEscrow");
+        
+        //EXCEPTION: Unauthorized 
+        //TODO: test this 
+        require(msg.sender == address(escrow.arbitrationModule), "Unauthorized"); //NOT COVERED
+
 
         /* --- EXECUTION --- 
         **********************************************************************************/
+
+        if (proposal.primaryLegAction = ArbitrationAction.Refund) {
+            //_refund(escrowId, )
+        }
+        else if (proposal.primaryLegAction = ArbitrationAction.Release) {
+
+        }
+
+        if (proposal.secondaryLegAction = ArbitrationAction.Refund) {
+            //_refund(escrowId, )
+        }
+        else if (proposal.secondaryLegAction = ArbitrationAction.Release) {
+            
+        }
+        
+        //here now, if the status of the escrow is still Arbitration, we can set it back to Active
+        // Because either (a) it is completed and was set to Completed, or (b) it was not completed; that means
+        // that it should not be in Arbitration anymore, but it's also not completed, so it's still in play
+        if (escrows[escrowId].status != EscrowStatus.Completed) {
+            escrows[escrowId].status = EscrowStatus.Active;
+        }
 
 
         /* --- EVENTS --- 
